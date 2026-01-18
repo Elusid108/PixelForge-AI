@@ -11,17 +11,18 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- React & Babel for In-Browser Compilation -->
+    <!-- Import Map: Defines where 'react' and other modules come from -->
     <script type="importmap">
     {
       "imports": {
         "react": "https://esm.sh/react@18.2.0",
         "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.263.1?external=react"
+        "lucide-react": "https://esm.sh/lucide-react@0.344.0"
       }
     }
     </script>
-    <script type="module" src="https://esm.sh/run"></script>
+
+    <!-- Babel for in-browser JSX compilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -45,9 +46,10 @@
 <body>
     <div id="root"></div>
 
+    <!-- Application Logic -->
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
+        import { createRoot } from 'react-dom/client';
         import { 
             Sparkles, History, Trash2, Download, Image as ImageIcon, 
             Wand2, Settings, PlusCircle, Cloud, Edit3, X, ExternalLink,
@@ -436,9 +438,23 @@
                                             <option value="">No Style</option>
                                             <option value=", cyberpunk style, neon lights">Cyberpunk</option>
                                             <option value=", anime style, studio ghibli">Anime</option>
-                                            <option value=", watercolor painting">Watercolor</option>
-                                            <option value=", photorealistic, 8k">Photorealistic</option>
-                                            <option value=", 3d render, pixar style">3D Render</option>
+                                            <option value=", watercolor painting, artistic">Watercolor</option>
+                                            <option value=", photorealistic, 8k, cinematic">Photorealistic</option>
+                                            <option value=", oil painting style, visible brushstrokes">Oil Painting</option>
+                                            <option value=", 3d render, pixar style, cute">3D Render</option>
+                                            <option value=", pixel art, 16-bit, retro game">Pixel Art</option>
+                                            <option value=", synthwave, retrowave, 80s style">Synthwave</option>
+                                            <option value=", film noir, black and white, high contrast">Film Noir</option>
+                                            <option value=", origami style, paper art">Origami</option>
+                                            <option value=", comic book style, bold lines">Comic Book</option>
+                                            <option value=", continuous line drawing, minimalist">Line Art</option>
+                                            <option value=", surrealism, salvador dali style">Surrealism</option>
+                                            <option value=", claymation, stop motion, plasticine">Claymation</option>
+                                            <option value=", lovecraftian, eldritch horror, dark">Horror</option>
+                                            <option value=", isometric view, 3d, miniature">Isometric</option>
+                                            <option value=", low poly, geometric, polygon art">Low Poly</option>
+                                            <option value=", impressionist painting, van gogh style">Impressionist</option>
+                                            <option value=", steampunk style, brass, gears">Steampunk</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2 col-span-2">
@@ -509,7 +525,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
