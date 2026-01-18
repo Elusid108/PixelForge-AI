@@ -304,16 +304,43 @@
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{
-                        parts: [{ text: "Write a creative, purely descriptive image prompt for an AI image generator. Describe a scene, character, or object. Do NOT include style, camera, or lighting instructions. Keep it under 40 words." }]
-                    }]
+                        parts: [{ text: "Generate a completely random, creative, and distinct visual description for an image. The subject could be anything: an animal, a landscape, a futuristic object, a historical scene, an abstract concept, etc. Focus ONLY on the visual content (what is happening, who is there, the setting). Do NOT include art style, lighting, or camera angles. Keep it concise (20-40 words). Ensure high variety." }]
+                    }],
+                    generationConfig: {
+                        temperature: 1.1, // Higher temperature for more variety
+                        maxOutputTokens: 100
+                    }
                 };
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "A mysterious object floating in space.";
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    
+                    if (data.error) throw new Error(data.error.message);
+                    
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                    if (!text) throw new Error("No text returned");
+                    return text;
+                } catch (e) {
+                    // Robust fallback list if API fails
+                    console.warn("Random prompt API failed, using fallback", e);
+                    const backups = [
+                        "A solitary lighthouse keeper watching a storm roll in over bioluminescent waves.",
+                        "A cyberpunk street vendor selling glowing noodles in the rain.",
+                        "An ancient library where the books are floating and glowing with magic.",
+                        "A macro shot of a dewdrop on a spiderweb reflecting a vibrant flower.",
+                        "A steam-powered mechanical dragon perched on a clocktower.",
+                        "A futuristic city built inside a giant crystal cavern.",
+                        "A fox wearing a spacesuit exploring the surface of Mars.",
+                        "A serene zen garden with cherry blossoms falling into a koi pond.",
+                        "A chaotic abstract explosion of colorful geometric shapes.",
+                        "A weary knight resting by a campfire in a dark, misty forest."
+                    ];
+                    return backups[Math.floor(Math.random() * backups.length)];
+                }
             };
 
             const generateFilename = async (originalPrompt) => {
@@ -323,15 +350,19 @@
                         parts: [{ text: `Create a short, filename-safe title (max 5 words, using underscores instead of spaces, no special chars) for this image description: "${originalPrompt}". Output ONLY the filename.` }]
                     }]
                 };
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                let name = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Image_${Date.now()}`;
-                // Clean up filename just in case
-                return name.replace(/[^a-zA-Z0-9_]/g, ''); 
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    let name = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Image_${Date.now()}`;
+                    // Clean up filename: keep only letters, numbers, underscores
+                    return name.replace(/[^a-zA-Z0-9_]/g, ''); 
+                } catch (e) {
+                    return `Image_${Date.now()}`;
+                }
             };
 
             const callImagen = async (promptText, modifiers, ratioText, negPrompt) => {
