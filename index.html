@@ -340,15 +340,32 @@
 
             const generateRandomPrompt = async () => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                
+                const systemInstruction = `You are a visionary poet with an infinite imagination. Your task is to hallucinate a new visual scene and describe it with breathtaking eloquence.
+
+**Your Instructions:**
+1. **The Subject:** Randomly select a new subject for every response. It can be anything—a cosmic event, a quiet domestic moment, a mythological creature, a futuristic architectural detail, or a microscopic interaction. Never repeat a theme twice in a row.
+2. **The Tone:** Write like a master poet. Use sensory language, metaphor, and emotive adjectives. Focus deeply on lighting, texture, atmosphere, and the "feeling" of the scene.
+3. **The Constraint:** Describe **ONLY** the visual reality within the scene. Do NOT describe the artistic medium or rendering style.
+    * *BAD:* "A photorealistic oil painting of a cat."
+    * *GOOD:* "A feline silhouette bathed in amber dusk, its fur a rugged landscape of shadow and gold."
+4. **Length:** Vary your length randomly between a single punchy sentence and two lush paragraphs.
+
+**Output:** Just the description. Nothing else.`;
+
                 const payload = {
                     contents: [{
-                        parts: [{ text: "Generate a completely random, creative, and distinct visual description for an image. The subject could be anything: an animal, a landscape, a futuristic object, a historical scene, an abstract concept, etc. Focus ONLY on the visual content (what is happening, who is there, the setting). Do NOT include art style, lighting, or camera angles. Keep it concise (20-40 words). Ensure high variety." }]
+                        parts: [{ text: "Hallucinate a new visual scene now." }]
                     }],
+                    systemInstruction: {
+                        parts: [{ text: systemInstruction }]
+                    },
                     generationConfig: {
-                        temperature: 1.1, // Higher temperature for more variety
-                        maxOutputTokens: 100
+                        temperature: 1.4, 
+                        maxOutputTokens: 300
                     }
                 };
+                
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -484,6 +501,19 @@
                 } else {
                     // Enter selection mode
                     setSelectionMode(true);
+                }
+            };
+
+            const toggleSelectAll = () => {
+                // If all currently filtered items are selected, deselect them. Otherwise, select all.
+                // We compare against filteredHistory to respect current sorting/filtering.
+                const allSelected = filteredHistory.length > 0 && filteredHistory.every(item => selectedItems.has(item.id));
+                
+                if (allSelected) {
+                    setSelectedItems(new Set());
+                } else {
+                    const allIds = new Set(filteredHistory.map(item => item.id));
+                    setSelectedItems(allIds);
                 }
             };
 
@@ -645,14 +675,23 @@
                         </div>
                         
                         {/* Bulk Actions Bar */}
-                        {selectionMode && selectedItems.size > 0 && (
+                        {selectionMode && (
                             <div className="p-2 bg-purple-900/20 border-b border-purple-500/20 flex justify-between items-center px-4 animate-in slide-in-from-top-2">
-                                <span className="text-xs text-purple-200 font-medium">{selectedItems.size} selected</span>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="checkbox" 
+                                        className="custom-checkbox"
+                                        checked={filteredHistory.length > 0 && filteredHistory.every(item => selectedItems.has(item.id))}
+                                        onChange={toggleSelectAll}
+                                        title="Select All"
+                                    />
+                                    <span className="text-xs text-purple-200 font-medium">{selectedItems.size} selected</span>
+                                </div>
                                 <div className="flex gap-2">
-                                    <button onClick={handleBulkDownload} className="p-1.5 hover:bg-purple-500/20 rounded text-purple-200" title="Download Zip">
+                                    <button onClick={handleBulkDownload} disabled={selectedItems.size === 0} className="p-1.5 hover:bg-purple-500/20 rounded text-purple-200 disabled:opacity-50" title="Download Zip">
                                         <Download size={14} />
                                     </button>
-                                    <button onClick={handleBulkDelete} className="p-1.5 hover:bg-red-500/20 rounded text-red-300" title="Delete Selected">
+                                    <button onClick={handleBulkDelete} disabled={selectedItems.size === 0} className="p-1.5 hover:bg-red-500/20 rounded text-red-300 disabled:opacity-50" title="Delete Selected">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
