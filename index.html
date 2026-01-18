@@ -11,7 +11,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Import Map: Defines where 'react' and other modules come from -->
+    <!-- Import Map -->
     <script type="importmap">
     {
       "imports": {
@@ -22,7 +22,7 @@
     }
     </script>
 
-    <!-- Babel for in-browser JSX compilation -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -48,18 +48,72 @@
 
     <!-- Application Logic -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
+        import React, { useState, useEffect, useMemo } from 'react';
         import { createRoot } from 'react-dom/client';
         import { 
             Sparkles, History, Trash2, Download, Image as ImageIcon, 
-            Wand2, Settings, PlusCircle, Cloud, Edit3, X, ExternalLink,
-            Menu, ChevronLeft, Save
+            Wand2, Settings, PlusCircle, Filter, SortDesc, SortAsc, 
+            X, ExternalLink, Menu, ChevronLeft, Sun, Palette, Ban
         } from 'lucide-react';
+
+        // --- CONSTANTS ---
+        const STYLES = [
+            { label: "No Style", value: "" },
+            { label: "Cyberpunk", value: ", cyberpunk style, neon lights" },
+            { label: "Anime", value: ", anime style, studio ghibli" },
+            { label: "Watercolor", value: ", watercolor painting, artistic" },
+            { label: "Photorealistic", value: ", photorealistic, 8k, cinematic" },
+            { label: "Oil Painting", value: ", oil painting, textured" },
+            { label: "3D Render", value: ", 3d render, pixar style" },
+            { label: "Pixel Art", value: ", pixel art, 16-bit" },
+            { label: "Synthwave", value: ", synthwave, retrowave" },
+            { label: "Film Noir", value: ", film noir, b&w" },
+            { label: "Origami", value: ", origami style, paper" },
+            { label: "Comic Book", value: ", comic book style, bold" },
+            { label: "Line Art", value: ", continuous line drawing, minimalist" },
+            { label: "Surrealism", value: ", surrealism, salvador dali style" },
+            { label: "Claymation", value: ", claymation, stop motion, plasticine" },
+            { label: "Horror", value: ", lovecraftian, eldritch horror, dark" },
+            { label: "Isometric", value: ", isometric view, 3d, miniature" },
+            { label: "Low Poly", value: ", low poly, geometric, polygon art" },
+            { label: "Impressionist", value: ", impressionist painting, van gogh style" },
+            { label: "Steampunk", value: ", steampunk style, brass, gears" }
+        ];
+
+        const RATIOS = [
+            { label: "Square (1:1)", value: "1:1" },
+            { label: "Landscape (16:9)", value: "16:9" },
+            { label: "Portrait (9:16)", value: "9:16" },
+            { label: "Standard (4:3)", value: "4:3" },
+            { label: "Vertical (3:4)", value: "3:4" }
+        ];
+
+        const LIGHTING = [
+            { label: "Default", value: "" },
+            { label: "Cinematic", value: ", cinematic lighting, dramatic shadows" },
+            { label: "Natural", value: ", soft natural lighting, sunlight" },
+            { label: "Golden Hour", value: ", golden hour, warm sunset lighting" },
+            { label: "Studio", value: ", studio lighting, perfect exposure" },
+            { label: "Neon", value: ", neon lighting, glowing, vibrant" },
+            { label: "Dark/Moody", value: ", dark atmosphere, dim lighting, mystery" },
+            { label: "Rembrandt", value: ", rembrandt lighting, chiaroscuro" }
+        ];
+
+        const MOODS = [
+            { label: "Default", value: "" },
+            { label: "Vibrant", value: ", vibrant colors, high saturation" },
+            { label: "Muted", value: ", muted colors, desaturated, matte" },
+            { label: "Pastel", value: ", pastel color palette, soft colors" },
+            { label: "Dark Fantasy", value: ", dark fantasy, grim, ethereal" },
+            { label: "Ethereal", value: ", ethereal, dreamy, magical" },
+            { label: "Retro", value: ", retro aesthetic, vintage filter" },
+            { label: "B&W", value: ", black and white, monochrome" }
+        ];
 
         // --- DATABASE UTILITIES (IndexedDB) ---
         const DB_NAME = 'PixelForgeDB';
         const STORE_NAME = 'history';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2; // Upgraded version for new fields
 
         const initDB = () => {
             return new Promise((resolve, reject) => {
@@ -112,16 +166,26 @@
 
         // --- MAIN APP COMPONENT ---
         function App() {
+            // State
             const [apiKey, setApiKey] = useState('');
             const [showSettings, setShowSettings] = useState(false);
             const [history, setHistory] = useState([]);
+            
+            // Generation State
             const [prompt, setPrompt] = useState('');
+            const [negativePrompt, setNegativePrompt] = useState('');
             const [style, setStyle] = useState('');
             const [ratio, setRatio] = useState('1:1');
+            const [lighting, setLighting] = useState('');
+            const [mood, setMood] = useState('');
             const [isGenerating, setIsGenerating] = useState(false);
             const [currentImage, setCurrentImage] = useState(null);
-            const [mode, setMode] = useState('GENERATE'); // GENERATE | MODIFY
-            const [selectedItem, setSelectedItem] = useState(null);
+            
+            // Sort/Filter State
+            const [sortBy, setSortBy] = useState('newest'); 
+            const [filterStyle, setFilterStyle] = useState('ALL');
+            
+            const [selectedId, setSelectedId] = useState(null);
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [error, setError] = useState(null);
 
@@ -141,6 +205,22 @@
                 }
             };
 
+            // Filter & Sort Logic
+            const filteredHistory = useMemo(() => {
+                let result = [...history];
+                
+                if (filterStyle !== 'ALL') {
+                    result = result.filter(item => item.style === filterStyle);
+                }
+                
+                result.sort((a, b) => {
+                    if (sortBy === 'newest') return b.timestamp - a.timestamp;
+                    return a.timestamp - b.timestamp;
+                });
+                
+                return result;
+            }, [history, sortBy, filterStyle]);
+
             const handleGenerate = async () => {
                 if (!apiKey) {
                     setShowSettings(true);
@@ -152,41 +232,27 @@
                 setError(null);
 
                 try {
-                    let finalPrompt = prompt;
-                    let finalStyle = style === 'NO_CHANGE' ? '' : style;
-                    let finalRatio = ratio;
-
-                    // WORKFLOW 1: MODIFY (Visual Analysis -> Text-to-Image)
-                    if (mode === 'MODIFY' && selectedItem) {
-                        const description = await describeImageForModification(selectedItem.base64, prompt);
-                        finalPrompt = description;
-                        
-                        if (finalRatio === 'NO_CHANGE') {
-                            finalRatio = selectedItem.ratio || '1:1';
-                        }
-                    } 
-                    // WORKFLOW 2: STANDARD GENERATE
-                    else {
-                        if (finalRatio === 'NO_CHANGE') finalRatio = '1:1';
-                    }
-
-                    const newImageBase64 = await callImagen(finalPrompt, finalStyle, finalRatio);
+                    // Combine modifiers for the API call
+                    const modifiers = style + lighting + mood;
+                    const newImageBase64 = await callImagen(prompt, modifiers, ratio, negativePrompt);
 
                     const newItem = {
                         id: crypto.randomUUID(),
                         timestamp: Date.now(),
-                        prompt: finalPrompt,
-                        userPrompt: prompt,
-                        style: finalStyle,
-                        ratio: finalRatio,
+                        prompt: prompt,
+                        negativePrompt: negativePrompt,
+                        style: style,
+                        ratio: ratio,
+                        lighting: lighting,
+                        mood: mood,
                         base64: newImageBase64
                     };
 
                     await saveToDB(newItem);
                     setHistory(prev => [newItem, ...prev]);
                     
-                    setSelectedItem(newItem);
                     setCurrentImage(newItem);
+                    setSelectedId(newItem.id);
 
                 } catch (err) {
                     setError(err.message);
@@ -195,40 +261,17 @@
                 }
             };
 
-            const describeImageForModification = async (base64, modificationRequest) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
-                
-                const instructions = `Look at this image. I want to generate a NEW image that looks just like this one, BUT with this modification: "${modificationRequest}".
-                Write a highly detailed text-to-image prompt that describes the image I provided, but incorporating my modification naturally. 
-                Do not mention "the image provided". Just describe the scene. Output ONLY the prompt text.`;
-
-                const payload = {
-                    contents: [{
-                        parts: [
-                            { text: instructions },
-                            { inlineData: { mimeType: "image/png", data: base64 } }
-                        ]
-                    }]
-                };
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-                if (data.error) throw new Error("Gemini Vision Error: " + data.error.message);
-                return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            };
-
-            const callImagen = async (promptText, styleText, ratioText) => {
+            const callImagen = async (promptText, modifiers, ratioText, negPrompt) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
-                const fullPrompt = styleText ? `${promptText} ${styleText}` : promptText;
+                const fullPrompt = modifiers ? `${promptText} ${modifiers}` : promptText;
 
                 const payload = {
                     instances: [{ prompt: fullPrompt }],
-                    parameters: { sampleCount: 1, aspectRatio: ratioText || "1:1" }
+                    parameters: { 
+                        sampleCount: 1, 
+                        aspectRatio: ratioText || "1:1",
+                        negativePrompt: negPrompt || undefined
+                    }
                 };
 
                 const response = await fetch(url, {
@@ -264,21 +307,27 @@
             };
 
             const selectItem = (item) => {
-                setSelectedItem(item);
                 setCurrentImage(item);
-                setMode('MODIFY');
-                setPrompt('');
-                setStyle('NO_CHANGE');
-                setRatio('NO_CHANGE');
+                setSelectedId(item.id);
+                
+                // RELOAD ALL SETTINGS
+                setPrompt(item.prompt || "");
+                setNegativePrompt(item.negativePrompt || "");
+                setStyle(item.style || "");
+                setRatio(item.ratio || "1:1");
+                setLighting(item.lighting || "");
+                setMood(item.mood || "");
             };
 
-            const resetToGenerate = () => {
-                setMode('GENERATE');
-                setSelectedItem(null);
+            const resetToNew = () => {
                 setCurrentImage(null);
+                setSelectedId(null);
                 setPrompt('');
+                setNegativePrompt('');
                 setStyle('');
                 setRatio('1:1');
+                setLighting('');
+                setMood('');
             };
 
             const handleDelete = async (e, id) => {
@@ -286,7 +335,7 @@
                 if (confirm("Delete this image?")) {
                     await deleteFromDB(id);
                     setHistory(prev => prev.filter(i => i.id !== id));
-                    if (selectedItem?.id === id) resetToGenerate();
+                    if (selectedId === id) resetToNew();
                 }
             };
 
@@ -345,27 +394,69 @@
                             </div>
                             <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500"><ChevronLeft/></button>
                         </div>
+
+                        {/* Sort & Filter */}
+                        <div className="p-3 border-b border-gray-800 grid grid-cols-2 gap-2 bg-gray-900/50">
+                            <div className="relative">
+                                <select 
+                                    value={sortBy} 
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="w-full bg-gray-950 border border-gray-800 text-gray-400 text-xs rounded-lg p-2 pl-8 appearance-none focus:border-purple-500 outline-none cursor-pointer"
+                                >
+                                    <option value="newest">Newest</option>
+                                    <option value="oldest">Oldest</option>
+                                </select>
+                                <div className="absolute left-2.5 top-2.5 text-gray-500 pointer-events-none">
+                                    {sortBy === 'newest' ? <SortDesc size={12} /> : <SortAsc size={12} />}
+                                </div>
+                            </div>
+                            <div className="relative">
+                                <select 
+                                    value={filterStyle} 
+                                    onChange={(e) => setFilterStyle(e.target.value)}
+                                    className="w-full bg-gray-950 border border-gray-800 text-gray-400 text-xs rounded-lg p-2 pl-8 appearance-none focus:border-purple-500 outline-none cursor-pointer"
+                                >
+                                    <option value="ALL">All Styles</option>
+                                    {STYLES.filter(s => s.value).map((s, i) => (
+                                        <option key={i} value={s.value}>{s.label}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute left-2.5 top-2.5 text-gray-500 pointer-events-none">
+                                    <Filter size={12} />
+                                </div>
+                            </div>
+                        </div>
                         
+                        {/* History List */}
                         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                            {history.length === 0 ? (
-                                <div className="text-center text-gray-600 mt-10 text-xs">No history yet</div>
+                            {filteredHistory.length === 0 ? (
+                                <div className="text-center text-gray-600 mt-10 text-xs">
+                                    {history.length === 0 ? "No history yet" : "No matches found"}
+                                </div>
                             ) : (
-                                history.map(item => (
+                                filteredHistory.map(item => (
                                     <div 
                                         key={item.id}
                                         onClick={() => selectItem(item)}
-                                        className={`group relative p-2 rounded-lg border cursor-pointer transition-all flex gap-3 items-center ${selectedItem?.id === item.id ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-950 border-gray-800 hover:bg-gray-800'}`}
+                                        className={`group relative p-2 rounded-lg border cursor-pointer transition-all flex gap-3 items-center ${selectedId === item.id ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-950 border-gray-800 hover:bg-gray-800'}`}
                                     >
                                         <div className="w-12 h-12 bg-black rounded overflow-hidden shrink-0">
                                             <img src={`data:image/png;base64,${item.base64}`} className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs text-gray-300 truncate font-medium">{item.userPrompt || item.prompt}</p>
-                                            <p className="text-[10px] text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                                            <p className="text-xs text-gray-300 truncate font-medium">{item.prompt}</p>
+                                            <div className="flex justify-between items-center mt-0.5">
+                                                <p className="text-[10px] text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                                                {item.style && (
+                                                    <span className="text-[9px] bg-gray-800 text-gray-400 px-1.5 rounded truncate max-w-[60px]">
+                                                        {STYLES.find(s => s.value === item.style)?.label || "Custom"}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <button 
                                             onClick={(e) => handleDelete(e, item.id)}
-                                            className="absolute right-2 p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute right-2 top-2 p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             <Trash2 size={12} />
                                         </button>
@@ -408,68 +499,62 @@
                                 
                                 <div className="flex justify-between items-center">
                                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                        {mode === 'GENERATE' ? 'New Creation' : 'Modify Selection'}
+                                        Create New Image
                                     </div>
-                                    {mode === 'MODIFY' && (
-                                        <button onClick={resetToGenerate} className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300">
-                                            <PlusCircle size={12} /> Start New
-                                        </button>
-                                    )}
+                                    <button onClick={resetToNew} className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300">
+                                        <PlusCircle size={12} /> Clear
+                                    </button>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <textarea 
-                                        value={prompt}
-                                        onChange={(e) => setPrompt(e.target.value)}
-                                        placeholder={mode === 'MODIFY' ? "Describe changes (e.g. 'Add a red cape')..." : "A futuristic city..."}
-                                        className="w-full h-32 bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-200 focus:ring-2 focus:ring-purple-500 outline-none resize-none placeholder-gray-600"
-                                    ></textarea>
+                                {/* Prompt & Negative */}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase">Prompt</label>
+                                        <textarea 
+                                            value={prompt}
+                                            onChange={(e) => setPrompt(e.target.value)}
+                                            placeholder="A futuristic city..."
+                                            className="w-full h-24 bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-200 focus:ring-2 focus:ring-purple-500 outline-none resize-none placeholder-gray-600"
+                                        ></textarea>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1">
+                                            <Ban size={12} /> Exclude (Negative)
+                                        </label>
+                                        <input 
+                                            value={negativePrompt}
+                                            onChange={(e) => setNegativePrompt(e.target.value)}
+                                            placeholder="Blurry, low quality, distorted..."
+                                            className="w-full bg-gray-900 border border-gray-800 rounded-lg p-3 text-sm text-gray-200 focus:ring-2 focus:ring-purple-500 outline-none"
+                                        />
+                                    </div>
                                 </div>
 
+                                {/* Dropdowns */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2 col-span-2">
+                                    <div className="space-y-2">
                                         <label className="text-xs font-semibold text-gray-400 uppercase">Style</label>
-                                        <select 
-                                            value={style} 
-                                            onChange={(e) => setStyle(e.target.value)}
-                                            className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-xl p-3 outline-none"
-                                        >
-                                            {mode === 'MODIFY' && <option value="NO_CHANGE" className="text-gray-400">(No Change)</option>}
-                                            <option value="">No Style</option>
-                                            <option value=", cyberpunk style, neon lights">Cyberpunk</option>
-                                            <option value=", anime style, studio ghibli">Anime</option>
-                                            <option value=", watercolor painting, artistic">Watercolor</option>
-                                            <option value=", photorealistic, 8k, cinematic">Photorealistic</option>
-                                            <option value=", oil painting style, visible brushstrokes">Oil Painting</option>
-                                            <option value=", 3d render, pixar style, cute">3D Render</option>
-                                            <option value=", pixel art, 16-bit, retro game">Pixel Art</option>
-                                            <option value=", synthwave, retrowave, 80s style">Synthwave</option>
-                                            <option value=", film noir, black and white, high contrast">Film Noir</option>
-                                            <option value=", origami style, paper art">Origami</option>
-                                            <option value=", comic book style, bold lines">Comic Book</option>
-                                            <option value=", continuous line drawing, minimalist">Line Art</option>
-                                            <option value=", surrealism, salvador dali style">Surrealism</option>
-                                            <option value=", claymation, stop motion, plasticine">Claymation</option>
-                                            <option value=", lovecraftian, eldritch horror, dark">Horror</option>
-                                            <option value=", isometric view, 3d, miniature">Isometric</option>
-                                            <option value=", low poly, geometric, polygon art">Low Poly</option>
-                                            <option value=", impressionist painting, van gogh style">Impressionist</option>
-                                            <option value=", steampunk style, brass, gears">Steampunk</option>
+                                        <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none">
+                                            {STYLES.map((s, i) => <option key={i} value={s.value}>{s.label}</option>)}
                                         </select>
                                     </div>
-                                    <div className="space-y-2 col-span-2">
-                                        <label className="text-xs font-semibold text-gray-400 uppercase">Aspect Ratio</label>
-                                        <select 
-                                            value={ratio} 
-                                            onChange={(e) => setRatio(e.target.value)}
-                                            className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-xl p-3 outline-none"
-                                        >
-                                            {mode === 'MODIFY' && <option value="NO_CHANGE" className="text-gray-400">(No Change)</option>}
-                                            <option value="1:1">Square (1:1)</option>
-                                            <option value="16:9">Landscape (16:9)</option>
-                                            <option value="9:16">Portrait (9:16)</option>
-                                            <option value="4:3">Standard (4:3)</option>
-                                            <option value="3:4">Vertical (3:4)</option>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase">Ratio</label>
+                                        <select value={ratio} onChange={(e) => setRatio(e.target.value)} className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none">
+                                            {RATIOS.map((r, i) => <option key={i} value={r.value}>{r.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1"><Sun size={12}/> Lighting</label>
+                                        <select value={lighting} onChange={(e) => setLighting(e.target.value)} className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none">
+                                            {LIGHTING.map((l, i) => <option key={i} value={l.value}>{l.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1"><Palette size={12}/> Mood</label>
+                                        <select value={mood} onChange={(e) => setMood(e.target.value)} className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none">
+                                            {MOODS.map((m, i) => <option key={i} value={m.value}>{m.label}</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -477,13 +562,19 @@
                                 <button 
                                     onClick={handleGenerate} 
                                     disabled={isGenerating || !prompt}
-                                    className={`w-full py-4 rounded-xl font-bold text-white shadow-xl flex items-center justify-center gap-2 transition-all ${
-                                        mode === 'MODIFY' 
-                                            ? 'bg-gradient-to-r from-blue-600 to-cyan-600' 
-                                            : 'bg-gradient-to-r from-purple-600 to-pink-600'
-                                    } ${isGenerating || !prompt ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'}`}
+                                    className={`w-full py-4 rounded-xl font-bold text-white shadow-xl flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-600 to-pink-600 ${isGenerating || !prompt ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-purple-500/25'}`}
                                 >
-                                    {isGenerating ? 'Processing...' : (mode === 'MODIFY' ? 'Modify Image' : 'Generate')}
+                                    {isGenerating ? (
+                                        <>
+                                            <div className="loader w-4 h-4 border-2"></div>
+                                            <span>Dreaming...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Wand2 size={20} />
+                                            <span>Generate</span>
+                                        </>
+                                    )}
                                 </button>
                                 
                                 {error && (
@@ -496,7 +587,7 @@
                             {/* PREVIEW (RIGHT) */}
                             <div className="flex-1 bg-gray-950 p-6 flex items-center justify-center relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-gray-950">
                                 {currentImage ? (
-                                    <div className="relative group max-w-full max-h-full">
+                                    <div className="relative group max-w-full max-h-full animate-in fade-in zoom-in duration-300">
                                         <img 
                                             src={`data:image/png;base64,${currentImage.base64}`} 
                                             className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl border border-gray-800" 
