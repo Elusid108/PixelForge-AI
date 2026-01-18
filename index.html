@@ -89,7 +89,7 @@
             Sparkles, History, Trash2, Download, Image as ImageIcon, 
             Wand2, Settings, PlusCircle, Filter, SortDesc, SortAsc, 
             X, ExternalLink, Menu, ChevronLeft, Sun, Palette, Ban, Dices,
-            CheckSquare, Square
+            CheckSquare
         } from 'lucide-react';
 
         // --- CONSTANTS ---
@@ -200,6 +200,141 @@
             });
         };
 
+        // --- API HELPERS (Passed key dynamically) ---
+
+        const callTextAI = async (key, systemInstruction, userPrompt) => {
+            // Models to try in order of preference. 
+            // Extended list to handle varying API key access levels and regions.
+            const models = [
+                'gemini-1.5-flash', 
+                'gemini-1.5-flash-8b',
+                'gemini-1.5-pro',
+                'gemini-1.0-pro',
+                'gemini-2.0-flash-exp'
+            ];
+            let lastError = null;
+
+            for (const model of models) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+                    
+                    // Legacy models (1.0 series) don't support 'systemInstruction' property at root
+                    const isLegacy = model.includes('1.0') || model === 'gemini-pro';
+                    
+                    let payload;
+                    if (isLegacy) {
+                        // Merge system prompt into user prompt for legacy models
+                        payload = {
+                            contents: [{ parts: [{ text: `${systemInstruction}\n\nTask: ${userPrompt}` }] }]
+                        };
+                    } else {
+                        payload = {
+                            contents: [{ parts: [{ text: userPrompt }] }],
+                            systemInstruction: { parts: [{ text: systemInstruction }] },
+                            generationConfig: { temperature: 1.3 } 
+                        };
+                    }
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        // Throw specific error to catch block to trigger next model
+                        throw new Error(`Model ${model} failed: ${data.error.message}`);
+                    }
+                    
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                    if (!text) throw new Error(`Model ${model} returned no text`);
+                    
+                    return text; // Success!
+
+                } catch (e) {
+                    console.warn(`Attempt with ${model} failed:`, e.message);
+                    lastError = e;
+                    // Continue loop to try next model
+                }
+            }
+            
+            // If all models fail
+            throw lastError || new Error("All text models failed");
+        };
+
+        const generateRandomPrompt = async (key) => {
+            const systemInstruction = `You are a visionary poet with an infinite imagination. Your task is to hallucinate a new visual scene and describe it with breathtaking eloquence.
+
+**Your Instructions:**
+1. **The Subject:** Randomly select a new subject for every response. It can be anything—a cosmic event, a quiet domestic moment, a mythological creature, a futuristic architectural detail, or a microscopic interaction. Never repeat a theme twice in a row.
+2. **The Tone:** Write like a master poet. Use sensory language, metaphor, and emotive adjectives. Focus deeply on lighting, texture, atmosphere, and the "feeling" of the scene.
+3. **The Constraint:** Describe **ONLY** the visual reality within the scene. Do NOT describe the artistic medium or rendering style.
+    * *BAD:* "A photorealistic oil painting of a cat."
+    * *GOOD:* "A feline silhouette bathed in amber dusk, its fur a rugged landscape of shadow and gold."
+4. **Length:** Vary your length randomly between a single punchy sentence and two lush paragraphs.
+
+**Output:** Just the description. Nothing else.`;
+
+            try {
+                return await callTextAI(key, systemInstruction, "Hallucinate a new visual scene now.");
+            } catch (e) {
+                console.error("All text models failed", e);
+                const backups = [
+                    "A solitary lighthouse keeper watching a storm roll in over bioluminescent waves.",
+                    "A cyberpunk street vendor selling glowing noodles in the rain.",
+                    "An ancient library where the books are floating and glowing with magic.",
+                    "A macro shot of a dewdrop on a spiderweb reflecting a vibrant flower.",
+                    "A steam-powered mechanical dragon perched on a clocktower.",
+                    "A futuristic city built inside a giant crystal cavern.",
+                    "A fox wearing a spacesuit exploring the surface of Mars.",
+                    "A serene zen garden with cherry blossoms falling into a koi pond.",
+                    "A chaotic abstract explosion of colorful geometric shapes.",
+                    "A weary knight resting by a campfire in a dark, misty forest."
+                ];
+                return backups[Math.floor(Math.random() * backups.length)];
+            }
+        };
+
+        const generateFilename = async (key, originalPrompt) => {
+            const systemInstruction = "You are a filename generator.";
+            const userPrompt = `Create a very short, filename-safe title (1-3 words, using underscores instead of spaces, no special chars, no file extension) that summarizes this image description: "${originalPrompt}". Output ONLY the summary.`;
+            
+            try {
+                const name = await callTextAI(key, systemInstruction, userPrompt);
+                return name.replace(/[^a-zA-Z0-9_]/g, ''); 
+            } catch (e) {
+                return `Image_${Date.now()}`;
+            }
+        };
+
+        const callImagen = async (key, promptText, modifiers, ratioText, negPrompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
+            const fullPrompt = modifiers ? `${promptText} ${modifiers}` : promptText;
+
+            const payload = {
+                instances: [{ prompt: fullPrompt }],
+                parameters: { 
+                    sampleCount: 1, 
+                    aspectRatio: ratioText || "1:1",
+                    negativePrompt: negPrompt || undefined
+                }
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error("Imagen Error: " + data.error.message);
+            if (!data.predictions?.[0]?.bytesBase64Encoded) throw new Error("No image data received");
+            
+            return data.predictions[0].bytesBase64Encoded;
+        };
+
         // --- MAIN APP COMPONENT ---
         function App() {
             // State
@@ -217,6 +352,9 @@
             const [isGenerating, setIsGenerating] = useState(false);
             const [isRandomizing, setIsRandomizing] = useState(false);
             const [currentImage, setCurrentImage] = useState(null);
+            
+            // Notification State
+            const [processingStatus, setProcessingStatus] = useState(null);
             
             // Sort/Filter/Select State
             const [sortBy, setSortBy] = useState('newest'); 
@@ -268,21 +406,24 @@
                 if (!prompt) return;
 
                 setIsGenerating(true);
+                setProcessingStatus("Dreaming up image...");
                 setError(null);
 
                 try {
                     // 1. Generate Image
                     const modifiers = style + lighting + mood;
-                    const newImageBase64 = await callImagen(prompt, modifiers, ratio, negativePrompt);
+                    const newImageBase64 = await callImagen(apiKey, prompt, modifiers, ratio, negativePrompt);
 
                     // 2. Generate Filename (API Call)
+                    setProcessingStatus("Generating title...");
                     let filename = `PixelForge-${Date.now()}`;
                     try {
-                        filename = await generateFilename(prompt);
+                        filename = await generateFilename(apiKey, prompt);
                     } catch (e) {
                         console.warn("Filename generation failed, using default", e);
                     }
 
+                    setProcessingStatus("Saving to gallery...");
                     const newItem = {
                         id: crypto.randomUUID(),
                         timestamp: Date.now(),
@@ -306,6 +447,7 @@
                     setError(err.message);
                 } finally {
                     setIsGenerating(false);
+                    setProcessingStatus(null);
                 }
             };
 
@@ -315,6 +457,8 @@
                     return;
                 }
                 setIsRandomizing(true);
+                setProcessingStatus("Hallucinating scene...");
+                setError(null);
                 try {
                     // 1. Randomize Dropdowns
                     const randomStyle = STYLES[Math.floor(Math.random() * STYLES.length)].value;
@@ -328,138 +472,20 @@
                     setMood(randomMood);
 
                     // 2. Generate Random Prompt
-                    const randomPrompt = await generateRandomPrompt();
+                    const randomPrompt = await generateRandomPrompt(apiKey);
                     setPrompt(randomPrompt);
 
                 } catch (err) {
                     setError("Randomizer failed: " + err.message);
                 } finally {
                     setIsRandomizing(false);
-                }
-            };
-
-            const generateRandomPrompt = async () => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                
-                const systemInstruction = `You are a visionary poet with an infinite imagination. Your task is to hallucinate a new visual scene and describe it with breathtaking eloquence.
-
-**Your Instructions:**
-1. **The Subject:** Randomly select a new subject for every response. It can be anything—a cosmic event, a quiet domestic moment, a mythological creature, a futuristic architectural detail, or a microscopic interaction. Never repeat a theme twice in a row.
-2. **The Tone:** Write like a master poet. Use sensory language, metaphor, and emotive adjectives. Focus deeply on lighting, texture, atmosphere, and the "feeling" of the scene.
-3. **The Constraint:** Describe **ONLY** the visual reality within the scene. Do NOT describe the artistic medium or rendering style.
-    * *BAD:* "A photorealistic oil painting of a cat."
-    * *GOOD:* "A feline silhouette bathed in amber dusk, its fur a rugged landscape of shadow and gold."
-4. **Length:** Vary your length randomly between a single punchy sentence and two lush paragraphs.
-
-**Output:** Just the description. Nothing else.`;
-
-                const payload = {
-                    contents: [{
-                        parts: [{ text: "Hallucinate a new visual scene now." }]
-                    }],
-                    systemInstruction: {
-                        parts: [{ text: systemInstruction }]
-                    },
-                    generationConfig: {
-                        temperature: 1.4, 
-                        maxOutputTokens: 300
-                    }
-                };
-                
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-                    
-                    if (data.error) throw new Error(data.error.message);
-                    
-                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                    if (!text) throw new Error("No text returned");
-                    return text;
-                } catch (e) {
-                    // Robust fallback list if API fails
-                    console.warn("Random prompt API failed, using fallback", e);
-                    const backups = [
-                        "A solitary lighthouse keeper watching a storm roll in over bioluminescent waves.",
-                        "A cyberpunk street vendor selling glowing noodles in the rain.",
-                        "An ancient library where the books are floating and glowing with magic.",
-                        "A macro shot of a dewdrop on a spiderweb reflecting a vibrant flower.",
-                        "A steam-powered mechanical dragon perched on a clocktower.",
-                        "A futuristic city built inside a giant crystal cavern.",
-                        "A fox wearing a spacesuit exploring the surface of Mars.",
-                        "A serene zen garden with cherry blossoms falling into a koi pond.",
-                        "A chaotic abstract explosion of colorful geometric shapes.",
-                        "A weary knight resting by a campfire in a dark, misty forest."
-                    ];
-                    return backups[Math.floor(Math.random() * backups.length)];
-                }
-            };
-
-            const generateFilename = async (originalPrompt) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{
-                        parts: [{ text: `Create a very short, filename-safe title (1-3 words, using underscores instead of spaces, no special chars, no file extension) that summarizes this image description: "${originalPrompt}". Output ONLY the summary.` }]
-                    }]
-                };
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-                    let name = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Image_${Date.now()}`;
-                    // Clean up filename: keep only letters, numbers, underscores
-                    return name.replace(/[^a-zA-Z0-9_]/g, ''); 
-                } catch (e) {
-                    return `Image_${Date.now()}`;
-                }
-            };
-
-            const callImagen = async (promptText, modifiers, ratioText, negPrompt) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
-                const fullPrompt = modifiers ? `${promptText} ${modifiers}` : promptText;
-
-                const payload = {
-                    instances: [{ prompt: fullPrompt }],
-                    parameters: { 
-                        sampleCount: 1, 
-                        aspectRatio: ratioText || "1:1",
-                        negativePrompt: negPrompt || undefined
-                    }
-                };
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await response.json();
-                if (data.error) throw new Error("Imagen Error: " + data.error.message);
-                if (!data.predictions?.[0]?.bytesBase64Encoded) throw new Error("No image data received");
-                
-                return data.predictions[0].bytesBase64Encoded;
-            };
-
-            const saveSettings = (e) => {
-                e.preventDefault();
-                const key = e.target.elements.key.value.trim();
-                if (key) {
-                    localStorage.setItem('pixelforge_api_key', key);
-                    setApiKey(key);
-                    setShowSettings(false);
+                    setProcessingStatus(null);
                 }
             };
 
             const handleDownload = (item) => {
                 const link = document.createElement('a');
                 link.href = `data:image/png;base64,${item.base64}`;
-                // Use the generated filename if available, else timestamp
                 link.download = item.filename ? `${item.filename}.png` : `pixelforge-${item.timestamp}.png`;
                 document.body.appendChild(link);
                 link.click();
@@ -495,20 +521,15 @@
 
             const toggleSelectionMode = () => {
                 if (selectionMode) {
-                    // Exit selection mode
                     setSelectionMode(false);
                     setSelectedItems(new Set());
                 } else {
-                    // Enter selection mode
                     setSelectionMode(true);
                 }
             };
 
             const toggleSelectAll = () => {
-                // If all currently filtered items are selected, deselect them. Otherwise, select all.
-                // We compare against filteredHistory to respect current sorting/filtering.
                 const allSelected = filteredHistory.length > 0 && filteredHistory.every(item => selectedItems.has(item.id));
-                
                 if (allSelected) {
                     setSelectedItems(new Set());
                 } else {
@@ -522,11 +543,8 @@
                     for (const id of selectedItems) {
                         await deleteFromDB(id);
                     }
-                    // Refresh history
                     refreshHistory();
-                    // Reset selection
                     setSelectedItems(new Set());
-                    // If current item was deleted, reset view
                     if (selectedItems.has(selectedId)) {
                         resetToNew();
                     }
@@ -535,26 +553,30 @@
 
             const handleBulkDownload = async () => {
                 if (selectedItems.size === 0) return;
+                setProcessingStatus("Zipping files...");
                 
-                const zip = new JSZip();
-                const folder = zip.folder("PixelForge_Images");
-                
-                history.filter(item => selectedItems.has(item.id)).forEach(item => {
-                    const filename = item.filename ? `${item.filename}.png` : `image_${item.timestamp}.png`;
-                    folder.file(filename, item.base64, {base64: true});
-                });
-                
-                const content = await zip.generateAsync({type:"blob"});
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = "pixelforge_batch.zip";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Clear selection after download? Maybe keep it.
-                // setSelectedItems(new Set());
-                // setSelectionMode(false); 
+                try {
+                    const zip = new JSZip();
+                    const folder = zip.folder("PixelForge_Images");
+                    
+                    history.filter(item => selectedItems.has(item.id)).forEach(item => {
+                        const filename = item.filename ? `${item.filename}.png` : `image_${item.timestamp}.png`;
+                        folder.file(filename, item.base64, {base64: true});
+                    });
+                    
+                    const content = await zip.generateAsync({type:"blob"});
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = "pixelforge_batch.zip";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (e) {
+                    console.error("Zip failed", e);
+                    setError("Failed to zip files");
+                } finally {
+                    setProcessingStatus(null);
+                }
             };
 
             const resetToNew = () => {
@@ -577,9 +599,27 @@
                 }
             };
 
+            const saveSettings = (e) => {
+                e.preventDefault();
+                const key = e.target.elements.key.value.trim();
+                if (key) {
+                    localStorage.setItem('pixelforge_api_key', key);
+                    setApiKey(key);
+                    setShowSettings(false);
+                }
+            };
+
             return (
-                <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden">
+                <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden relative">
                     
+                    {/* STATUS NOTIFICATION PILL */}
+                    {processingStatus && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 bg-gray-900/95 border border-purple-500/50 rounded-full shadow-2xl backdrop-blur-md animate-in slide-in-from-top-2 fade-in duration-200">
+                            <div className="loader w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs font-semibold text-purple-100 uppercase tracking-wide">{processingStatus}</span>
+                        </div>
+                    )}
+
                     {/* SETTINGS MODAL */}
                     {showSettings && (
                         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -731,7 +771,6 @@
                                             <img src={`data:image/png;base64,${item.base64}`} className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            {/* Display filename if available, fallback to truncated prompt */}
                                             <p className="text-xs text-gray-300 truncate font-medium">{item.filename || item.prompt}</p>
                                             <div className="flex justify-between items-center mt-0.5">
                                                 <p className="text-[10px] text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</p>
