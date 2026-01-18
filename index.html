@@ -11,6 +11,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- JSZip for Bulk Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <!-- Import Map -->
     <script type="importmap">
     {
@@ -41,6 +44,38 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* Checkbox Styles */
+        .custom-checkbox {
+            appearance: none;
+            background-color: #1f2937;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.15em;
+            height: 1.15em;
+            border: 1px solid #374151;
+            border-radius: 0.25em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+        }
+        .custom-checkbox::before {
+            content: "";
+            width: 0.65em;
+            height: 0.65em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        .custom-checkbox:checked::before {
+            transform: scale(1);
+        }
+        .custom-checkbox:checked {
+            background-color: #9333ea;
+            border-color: #9333ea;
+        }
     </style>
 </head>
 <body>
@@ -53,7 +88,8 @@
         import { 
             Sparkles, History, Trash2, Download, Image as ImageIcon, 
             Wand2, Settings, PlusCircle, Filter, SortDesc, SortAsc, 
-            X, ExternalLink, Menu, ChevronLeft, Sun, Palette, Ban, Dices
+            X, ExternalLink, Menu, ChevronLeft, Sun, Palette, Ban, Dices,
+            CheckSquare, Square
         } from 'lucide-react';
 
         // --- CONSTANTS ---
@@ -182,9 +218,11 @@
             const [isRandomizing, setIsRandomizing] = useState(false);
             const [currentImage, setCurrentImage] = useState(null);
             
-            // Sort/Filter State
+            // Sort/Filter/Select State
             const [sortBy, setSortBy] = useState('newest'); 
             const [filterStyle, setFilterStyle] = useState('ALL');
+            const [selectionMode, setSelectionMode] = useState(false);
+            const [selectedItems, setSelectedItems] = useState(new Set());
             
             const [selectedId, setSelectedId] = useState(null);
             const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -237,7 +275,7 @@
                     const modifiers = style + lighting + mood;
                     const newImageBase64 = await callImagen(prompt, modifiers, ratio, negativePrompt);
 
-                    // 2. Generate Filename (Parallel or quick follow-up)
+                    // 2. Generate Filename (API Call)
                     let filename = `PixelForge-${Date.now()}`;
                     try {
                         filename = await generateFilename(prompt);
@@ -347,7 +385,7 @@
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{
-                        parts: [{ text: `Create a short, filename-safe title (max 5 words, using underscores instead of spaces, no special chars) for this image description: "${originalPrompt}". Output ONLY the filename.` }]
+                        parts: [{ text: `Create a very short, filename-safe title (1-3 words, using underscores instead of spaces, no special chars, no file extension) that summarizes this image description: "${originalPrompt}". Output ONLY the summary.` }]
                     }]
                 };
                 try {
@@ -412,6 +450,10 @@
             };
 
             const selectItem = (item) => {
+                if (selectionMode) {
+                    toggleSelection(item.id);
+                    return;
+                }
                 setCurrentImage(item);
                 setSelectedId(item.id);
                 
@@ -422,6 +464,67 @@
                 setRatio(item.ratio || "1:1");
                 setLighting(item.lighting || "");
                 setMood(item.mood || "");
+            };
+
+            const toggleSelection = (id) => {
+                const newSelected = new Set(selectedItems);
+                if (newSelected.has(id)) {
+                    newSelected.delete(id);
+                } else {
+                    newSelected.add(id);
+                }
+                setSelectedItems(newSelected);
+            };
+
+            const toggleSelectionMode = () => {
+                if (selectionMode) {
+                    // Exit selection mode
+                    setSelectionMode(false);
+                    setSelectedItems(new Set());
+                } else {
+                    // Enter selection mode
+                    setSelectionMode(true);
+                }
+            };
+
+            const handleBulkDelete = async () => {
+                if (confirm(`Delete ${selectedItems.size} items?`)) {
+                    for (const id of selectedItems) {
+                        await deleteFromDB(id);
+                    }
+                    // Refresh history
+                    refreshHistory();
+                    // Reset selection
+                    setSelectedItems(new Set());
+                    // If current item was deleted, reset view
+                    if (selectedItems.has(selectedId)) {
+                        resetToNew();
+                    }
+                }
+            };
+
+            const handleBulkDownload = async () => {
+                if (selectedItems.size === 0) return;
+                
+                const zip = new JSZip();
+                const folder = zip.folder("PixelForge_Images");
+                
+                history.filter(item => selectedItems.has(item.id)).forEach(item => {
+                    const filename = item.filename ? `${item.filename}.png` : `image_${item.timestamp}.png`;
+                    folder.file(filename, item.base64, {base64: true});
+                });
+                
+                const content = await zip.generateAsync({type:"blob"});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "pixelforge_batch.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clear selection after download? Maybe keep it.
+                // setSelectedItems(new Set());
+                // setSelectionMode(false); 
             };
 
             const resetToNew = () => {
@@ -497,7 +600,16 @@
                                 <History size={18} />
                                 <span className="font-bold">History</span>
                             </div>
-                            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500"><ChevronLeft/></button>
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={toggleSelectionMode} 
+                                    className={`p-1.5 rounded transition-colors ${selectionMode ? 'text-purple-400 bg-purple-400/10' : 'text-gray-500 hover:text-white'}`}
+                                    title={selectionMode ? "Cancel Selection" : "Select Multiple"}
+                                >
+                                    {selectionMode ? <X size={16} /> : <CheckSquare size={16} />}
+                                </button>
+                                <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500"><ChevronLeft/></button>
+                            </div>
                         </div>
 
                         {/* Sort & Filter */}
@@ -532,6 +644,21 @@
                             </div>
                         </div>
                         
+                        {/* Bulk Actions Bar */}
+                        {selectionMode && selectedItems.size > 0 && (
+                            <div className="p-2 bg-purple-900/20 border-b border-purple-500/20 flex justify-between items-center px-4 animate-in slide-in-from-top-2">
+                                <span className="text-xs text-purple-200 font-medium">{selectedItems.size} selected</span>
+                                <div className="flex gap-2">
+                                    <button onClick={handleBulkDownload} className="p-1.5 hover:bg-purple-500/20 rounded text-purple-200" title="Download Zip">
+                                        <Download size={14} />
+                                    </button>
+                                    <button onClick={handleBulkDelete} className="p-1.5 hover:bg-red-500/20 rounded text-red-300" title="Delete Selected">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
                         {/* History List */}
                         <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {filteredHistory.length === 0 ? (
@@ -543,9 +670,25 @@
                                     <div 
                                         key={item.id}
                                         onClick={() => selectItem(item)}
-                                        className={`group relative p-2 rounded-lg border cursor-pointer transition-all flex gap-3 items-center ${selectedId === item.id ? 'bg-gray-800 border-purple-500/50' : 'bg-gray-950 border-gray-800 hover:bg-gray-800'}`}
+                                        className={`group relative p-2 rounded-lg border cursor-pointer transition-all flex gap-3 items-center ${
+                                            selectedId === item.id && !selectionMode ? 'bg-gray-800 border-purple-500/50' : 
+                                            selectionMode && selectedItems.has(item.id) ? 'bg-purple-900/20 border-purple-500/50' : 
+                                            'bg-gray-950 border-gray-800 hover:bg-gray-800'
+                                        }`}
                                     >
-                                        <div className="w-12 h-12 bg-black rounded overflow-hidden shrink-0">
+                                        {/* Selection Checkbox Overlay */}
+                                        {selectionMode && (
+                                            <div className="absolute inset-0 z-10 flex items-center pl-2" onClick={(e) => { e.stopPropagation(); toggleSelection(item.id); }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedItems.has(item.id)} 
+                                                    readOnly
+                                                    className="custom-checkbox ml-1"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className={`w-12 h-12 bg-black rounded overflow-hidden shrink-0 ${selectionMode ? 'opacity-50 ml-6' : ''} transition-all`}>
                                             <img src={`data:image/png;base64,${item.base64}`} className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -560,12 +703,14 @@
                                                 )}
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={(e) => handleDelete(e, item.id)}
-                                            className="absolute right-2 top-2 p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
+                                        {!selectionMode && (
+                                            <button 
+                                                onClick={(e) => handleDelete(e, item.id)}
+                                                className="absolute right-2 top-2 p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        )}
                                     </div>
                                 ))
                             )}
