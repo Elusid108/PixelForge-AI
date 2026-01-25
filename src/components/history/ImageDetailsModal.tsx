@@ -1,11 +1,12 @@
-import React from 'react';
-import { X, Copy, RefreshCw, Download, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Copy, RefreshCw, Download, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { STYLES } from '../../constants/styles';
 import { RATIOS } from '../../constants/ratios';
 import { LIGHTING } from '../../constants/lighting';
 import { MOODS } from '../../constants/moods';
 import { useImageGeneration } from '../../hooks/useImageGeneration';
+import { useHistory } from '../../hooks/useHistory';
 
 const formatGenerationTime = (ms?: number): string => {
   if (!ms) return 'N/A';
@@ -52,12 +53,45 @@ export const ImageDetailsModal: React.FC = () => {
     selectedImageDetails,
     setGenerationOptions,
     setToast,
+    setSelectedImageDetails,
   } = useAppStore();
   const { generate } = useImageGeneration();
+  const { getVariationsByGroupId } = useHistory();
+  const [imageDimensions, setImageDimensions] = useState<string>('Loading...');
+
+  useEffect(() => {
+    if (!selectedImageDetails?.base64) {
+      setImageDimensions('N/A');
+      return;
+    }
+
+    setImageDimensions('Loading...');
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions(`${img.naturalWidth}x${img.naturalHeight}`);
+    };
+    img.onerror = () => {
+      setImageDimensions('N/A');
+    };
+    img.src = `data:image/png;base64,${selectedImageDetails.base64}`;
+  }, [selectedImageDetails?.base64]);
 
   if (!showImageDetails || !selectedImageDetails) return null;
 
   const item = selectedImageDetails;
+  const variations = item.groupId ? getVariationsByGroupId(item.groupId) : null;
+  const currentVariationIndex = item.variationIndex !== undefined ? item.variationIndex : null;
+  const canNavigatePrev = variations && currentVariationIndex !== null && currentVariationIndex > 0;
+  const canNavigateNext = variations && currentVariationIndex !== null && currentVariationIndex < variations.length - 1;
+
+  const handleNavigateVariation = (direction: 'prev' | 'next') => {
+    if (!variations || currentVariationIndex === null) return;
+    
+    const newIndex = direction === 'prev' ? currentVariationIndex - 1 : currentVariationIndex + 1;
+    if (variations[newIndex]) {
+      setSelectedImageDetails(variations[newIndex]);
+    }
+  };
 
   const handleCopy = async (text: string, label: string) => {
     try {
@@ -76,6 +110,8 @@ export const ImageDetailsModal: React.FC = () => {
       ratio: item.ratio || '1:1',
       lighting: item.lighting || '',
       mood: item.mood || '',
+      resolution: item.resolution || '1K',
+      variations: 1, // Reset to 1 when regenerating
     });
     setShowImageDetails(false);
     generate();
@@ -89,9 +125,13 @@ export const ImageDetailsModal: React.FC = () => {
       ratio: item.ratio,
       lighting: item.lighting,
       mood: item.mood,
+      resolution: item.resolution,
       filename: item.filename,
       timestamp: new Date(item.timestamp).toISOString(),
       generationTime: item.generationTime ? formatGenerationTime(item.generationTime) : null,
+      groupId: item.groupId || null,
+      variationIndex: item.variationIndex !== undefined ? item.variationIndex : null,
+      totalVariations: variations ? variations.length : null,
     };
 
     const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
@@ -124,13 +164,48 @@ export const ImageDetailsModal: React.FC = () => {
           <div className="flex items-center gap-2 text-purple-400">
             <ImageIcon className="w-6 h-6" />
             <h2 className="text-xl font-bold">Image Details</h2>
+            {variations && variations.length > 1 && currentVariationIndex !== null && (
+              <span className="text-sm text-gray-400">
+                (Variation {currentVariationIndex + 1} of {variations.length})
+              </span>
+            )}
           </div>
-          <button
-            onClick={() => setShowImageDetails(false)}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {variations && variations.length > 1 && (
+              <>
+                <button
+                  onClick={() => handleNavigateVariation('prev')}
+                  disabled={!canNavigatePrev}
+                  className={`p-1.5 rounded transition-colors ${
+                    canNavigatePrev
+                      ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+                      : 'text-gray-700 cursor-not-allowed'
+                  }`}
+                  title="Previous variation"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => handleNavigateVariation('next')}
+                  disabled={!canNavigateNext}
+                  className={`p-1.5 rounded transition-colors ${
+                    canNavigateNext
+                      ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+                      : 'text-gray-700 cursor-not-allowed'
+                  }`}
+                  title="Next variation"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setShowImageDetails(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -166,6 +241,18 @@ export const ImageDetailsModal: React.FC = () => {
               label="Mood"
               value={moodLabel}
               onCopy={() => handleCopy(moodLabel, 'Mood')}
+            />
+            {item.resolution && (
+              <CopyableField
+                label="Resolution"
+                value={item.resolution}
+                onCopy={() => handleCopy(item.resolution || '', 'Resolution')}
+              />
+            )}
+            <CopyableField
+              label="Image Resolution"
+              value={imageDimensions}
+              onCopy={() => handleCopy(imageDimensions, 'Image Resolution')}
             />
           </div>
 

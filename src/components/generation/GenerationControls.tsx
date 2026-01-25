@@ -71,6 +71,30 @@ export const GenerationControls: React.FC = () => {
           ))}
         </select>
       </div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-gray-400 uppercase">Resolution</label>
+        <select
+          value={generationOptions.resolution || '1K'}
+          onChange={(e) => setGenerationOptions({ resolution: e.target.value })}
+          className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none"
+        >
+          <option value="1K">1K</option>
+          <option value="2K">2K</option>
+        </select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-gray-400 uppercase">Variations</label>
+        <select
+          value={generationOptions.variations || 1}
+          onChange={(e) => setGenerationOptions({ variations: parseInt(e.target.value, 10) })}
+          className="w-full bg-gray-900 border border-gray-800 text-gray-200 text-sm rounded-lg p-2.5 outline-none"
+        >
+          <option value={1}>1</option>
+          <option value={2}>2</option>
+          <option value={3}>3</option>
+          <option value={4}>4</option>
+        </select>
+      </div>
     </div>
   );
 };

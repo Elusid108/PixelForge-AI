@@ -19,6 +19,12 @@ A modern, scalable AI image generation application built with React, TypeScript,
 - 📊 **Image Details**: View full metadata, regenerate, or export as JSON
 - ⏱️ **Generation Time**: Track and display how long each image took to generate
 - 🔄 **New from This**: Quickly reuse parameters from any previous image
+- 🖼️ **Multiple Variations**: Generate 1-4 image variations in a single request
+- 📐 **Resolution Options**: Choose between 1K and 2K output resolution
+- 🎯 **Variation Grid Display**: View multiple variations in a responsive grid layout
+- 🔍 **Fullscreen Viewer**: Click any variation to view in fullscreen with navigation
+- 📥 **Individual Downloads**: Download each variation separately or the entire set as ZIP
+- 📏 **Image Resolution Display**: See actual pixel dimensions (e.g., 1024x1024) in image details
 
 ## Tech Stack
 
@@ -127,8 +133,9 @@ The app is automatically deployed to GitHub Pages via GitHub Actions on every pu
 
 2. **Generate Images**:
    - Enter a prompt or use the randomizer to generate one
-   - Select style, ratio, lighting, and mood options
-   - Click "Generate" to create your image
+   - Select style, ratio, lighting, mood, resolution (1K/2K), and variations (1-4)
+   - Click "Generate" to create your image(s)
+   - Multiple variations will appear in a grid layout
 
 3. **Manage History**:
    - View all generated images in the sidebar
@@ -137,9 +144,12 @@ The app is automatically deployed to GitHub Pages via GitHub Actions on every pu
    - Click on an image to reload its settings
    - View details (hover over item and click info icon) to see full metadata
    - See generation time for each image
+   - Variation sets appear as a single entry with a count badge
+   - Click any variation to view the full grid
 
 4. **Download Images**:
    - Single: Click the download button on the preview
+   - Variation: Download individual variations or the entire set as ZIP
    - Bulk: Enable selection mode, select images, then download as ZIP
 
 5. **Keyboard Shortcuts**:
@@ -206,6 +216,17 @@ The application uses IndexedDB to store image history. The database name is `Pix
 MIT License - feel free to use this project for your own purposes.
 
 ## Recent Updates
+
+### v1.2.0 - Multi-Variation Support
+
+- ✅ **Multiple Variations**: Generate 1-4 image variations per request, displayed as a single history item
+- ✅ **Variation Grid**: Responsive grid layout showing all variations with individual download buttons
+- ✅ **Fullscreen Image Viewer**: Click any variation to view in fullscreen with keyboard navigation (arrow keys, Escape)
+- ✅ **Resolution Options**: Choose between 1K and 2K output resolution
+- ✅ **Set Download**: Download all variations in a set as a ZIP file
+- ✅ **Image Resolution Display**: View actual pixel dimensions (e.g., 1024x1024) in image details modal
+- ✅ **Variation Navigation**: Navigate between variations in the details modal
+- ✅ **Grouped History**: Variations appear as a single entry in history with variation count badge
 
 ### v1.1.0 - Phase 1 Quick Wins
 

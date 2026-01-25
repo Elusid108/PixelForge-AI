@@ -11,7 +11,13 @@ export const createZipFromImages = async (items: ImageItem[]): Promise<Blob> => 
 
   items.forEach((item) => {
     const filename = item.filename ? `${item.filename}.png` : `image_${item.timestamp}.png`;
-    folder.file(filename, item.base64, { base64: true });
+    // Convert base64 to binary for JSZip
+    const binaryString = atob(item.base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    folder.file(filename, bytes);
   });
 
   return await zip.generateAsync({ type: 'blob' });

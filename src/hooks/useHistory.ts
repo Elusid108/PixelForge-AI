@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { getHistoryFromDB, deleteFromDB } from '../services/storage/indexedDB';
+import { ImageItem } from '../types';
 
 export const useHistory = () => {
   const { history, setHistory, removeFromHistory } = useAppStore();
@@ -32,7 +33,33 @@ export const useHistory = () => {
       return a.timestamp - b.timestamp;
     });
 
-    return result;
+    // Group variations: show only one entry per groupId (the first variation)
+    const groupedMap = new Map<string, ImageItem>();
+    const singleItems: ImageItem[] = [];
+
+    result.forEach((item) => {
+      if (item.groupId) {
+        if (!groupedMap.has(item.groupId)) {
+          // Store the first variation of each group
+          groupedMap.set(item.groupId, item);
+        }
+      } else {
+        // Single items (no groupId) are added directly
+        singleItems.push(item);
+      }
+    });
+
+    // Combine grouped items and single items, maintaining sort order
+    const groupedItems = Array.from(groupedMap.values());
+    const combined = [...groupedItems, ...singleItems];
+
+    // Re-sort to maintain chronological order
+    combined.sort((a, b) => {
+      if (sortBy === 'newest') return b.timestamp - a.timestamp;
+      return a.timestamp - b.timestamp;
+    });
+
+    return combined;
   }, [history, sortBy, filterStyle]);
 
   const deleteItem = async (id: string) => {
@@ -44,6 +71,12 @@ export const useHistory = () => {
     return false;
   };
 
+  const getVariationsByGroupId = (groupId: string): ImageItem[] => {
+    return history
+      .filter((item) => item.groupId === groupId)
+      .sort((a, b) => (a.variationIndex || 0) - (b.variationIndex || 0));
+  };
+
   return {
     history,
     filteredHistory,
@@ -53,5 +86,6 @@ export const useHistory = () => {
     setFilterStyle,
     refreshHistory,
     deleteItem,
+    getVariationsByGroupId,
   };
 };

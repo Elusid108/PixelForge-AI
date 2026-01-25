@@ -4,6 +4,7 @@ import { ImageItem } from '../../types';
 import { STYLES } from '../../constants/styles';
 import { Checkbox } from '../common/Checkbox';
 import { useAppStore } from '../../store/useAppStore';
+import { useHistory } from '../../hooks/useHistory';
 
 const formatGenerationTime = (ms: number): string => {
   if (ms < 1000) {
@@ -38,6 +39,9 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
   onClick,
 }) => {
   const { setShowImageDetails, setSelectedImageDetails } = useAppStore();
+  const { getVariationsByGroupId } = useHistory();
+  
+  const variationCount = item.groupId ? getVariationsByGroupId(item.groupId).length : 0;
 
   const handleClick = () => {
     if (selectionMode) {
@@ -83,19 +87,45 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
       )}
 
       <div
-        className={`w-12 h-12 bg-black rounded overflow-hidden shrink-0 ${
+        className={`w-12 h-12 bg-black rounded overflow-hidden shrink-0 relative ${
           selectionMode ? 'opacity-50 ml-6' : ''
         } transition-all`}
       >
-        <img
-          src={`data:image/png;base64,${item.base64}`}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          alt={item.filename || item.prompt}
-        />
+        {variationCount > 1 ? (
+          <div className="grid grid-cols-2 w-full h-full">
+            {getVariationsByGroupId(item.groupId!)
+              .slice(0, 4)
+              .map((variation, idx) => (
+                <img
+                  key={variation.id}
+                  src={`data:image/png;base64,${variation.base64}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  alt={`${item.filename || item.prompt} - ${idx + 1}`}
+                />
+              ))}
+          </div>
+        ) : (
+          <img
+            src={`data:image/png;base64,${item.base64}`}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            alt={item.filename || item.prompt}
+          />
+        )}
+        {variationCount > 1 && (
+          <div className="absolute bottom-0 right-0 bg-purple-600 text-white text-[8px] px-1 rounded-tl">
+            {variationCount}
+          </div>
+        )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-300 truncate font-medium">{item.filename || item.prompt}</p>
+        <p className="text-xs text-gray-300 truncate font-medium">
+          {item.filename || item.prompt}
+          {variationCount > 1 && (
+            <span className="ml-1 text-[10px] text-purple-400">({variationCount} variations)</span>
+          )}
+        </p>
         <div className="flex justify-between items-center mt-0.5">
           <div className="flex flex-col gap-0.5">
             <p className="text-[10px] text-gray-500">

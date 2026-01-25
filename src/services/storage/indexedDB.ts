@@ -52,3 +52,20 @@ export const deleteFromDB = async (id: string): Promise<void> => {
     request.onerror = () => reject(request.error);
   });
 };
+
+export const getVariationsByGroupId = async (groupId: string): Promise<ImageItem[]> => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const allItems = request.result as ImageItem[];
+      const variations = allItems
+        .filter((item) => item.groupId === groupId)
+        .sort((a, b) => (a.variationIndex || 0) - (b.variationIndex || 0));
+      resolve(variations);
+    };
+    request.onerror = () => reject(request.error);
+  });
+};

@@ -5,19 +5,22 @@ export interface ImageGenerationOptions {
   modifiers?: string;
   ratio?: string;
   negativePrompt?: string;
+  resolution?: string;
+  variations?: number;
 }
 
 export const generateImage = async (
   key: string,
   options: ImageGenerationOptions
-): Promise<string> => {
-  const { prompt, modifiers, ratio = '1:1', negativePrompt } = options;
+): Promise<string[]> => {
+  const { prompt, modifiers, ratio = '1:1', negativePrompt, resolution = '1K', variations = 1 } = options;
   const fullPrompt = modifiers ? `${prompt} ${modifiers}` : prompt;
 
   const payload = {
     instances: [{ prompt: fullPrompt }],
     parameters: {
-      sampleCount: 1,
+      sampleCount: variations,
+      sampleImageSize: resolution,
       aspectRatio: ratio,
       negativePrompt: negativePrompt || undefined,
     },
@@ -44,9 +47,18 @@ export const generateImage = async (
     throw new Error('Imagen Error: ' + data.error.message);
   }
 
-  if (!data.predictions || data.predictions.length === 0 || !data.predictions[0]?.bytesBase64Encoded) {
+  if (!data.predictions || data.predictions.length === 0) {
     throw new Error('Generation Failed: No image data returned. (Possible safety block)');
   }
 
-  return data.predictions[0].bytesBase64Encoded;
+  // Return all predictions as an array of base64 strings
+  const images = data.predictions
+    .map((p) => p.bytesBase64Encoded)
+    .filter((img): img is string => img !== undefined);
+
+  if (images.length === 0) {
+    throw new Error('Generation Failed: No valid image data returned.');
+  }
+
+  return images;
 };

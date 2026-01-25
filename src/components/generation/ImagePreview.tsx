@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Download, Image as ImageIcon, RefreshCw, Info } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { useHistory } from '../../hooks/useHistory';
+import { VariationGrid } from './VariationGrid';
 
 export const ImagePreview: React.FC = () => {
   const { currentImage, setGenerationOptions, setToast, setShowImageDetails, setSelectedImageDetails } = useAppStore();
+  const { getVariationsByGroupId } = useHistory();
+
+  const variations = useMemo(() => {
+    if (!currentImage?.groupId) return null;
+    return getVariationsByGroupId(currentImage.groupId);
+  }, [currentImage?.groupId, getVariationsByGroupId]);
 
   const handleNewFromThis = () => {
     if (!currentImage) return;
@@ -15,6 +23,8 @@ export const ImagePreview: React.FC = () => {
       ratio: currentImage.ratio || '1:1',
       lighting: currentImage.lighting || '',
       mood: currentImage.mood || '',
+      resolution: currentImage.resolution || '1K',
+      variations: 1, // Reset to 1 when loading from existing image
     });
 
     setToast({ message: 'Parameters loaded from image', type: 'success' });
@@ -36,6 +46,12 @@ export const ImagePreview: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // If we have variations, show the grid
+  if (variations && variations.length > 1) {
+    return <VariationGrid variations={variations} />;
+  }
+
+  // Otherwise show single image view
   return (
     <div className="flex-1 bg-gray-950 p-6 flex items-center justify-center relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-gray-950">
       {currentImage ? (

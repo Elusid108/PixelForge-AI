@@ -35,6 +35,9 @@ export interface ImageItem {
   base64: string;
   filename: string;
   generationTime?: number; // in milliseconds
+  resolution?: string;
+  groupId?: string; // Links variations together
+  variationIndex?: number; // 0-based index within the group
 }
 
 export interface GenerationOptions {
@@ -44,6 +47,8 @@ export interface GenerationOptions {
   ratio: string;
   lighting: string;
   mood: string;
+  resolution?: string;
+  variations?: number;
 }
 
 export interface GeminiResponse {

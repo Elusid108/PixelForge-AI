@@ -11,7 +11,7 @@ import { deleteFromDB } from '../../services/storage/indexedDB';
 import { createZipFromImages, downloadBlob } from '../../services/download/zipService';
 
 export const HistoryList: React.FC = () => {
-  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, deleteItem } =
+  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, deleteItem, getVariationsByGroupId } =
     useHistory();
   const { selectionMode, selectedItems, toggleSelection, toggleSelectionMode, clearSelection, toggleSelectAll, isAllSelected } =
     useSelection(filteredHistory);
@@ -31,8 +31,22 @@ export const HistoryList: React.FC = () => {
       toggleSelection(item.id);
       return;
     }
-    setCurrentImage(item);
-    setSelectedId(item.id);
+    
+    // If item has a groupId, get all variations and set the first one
+    if (item.groupId) {
+      const variations = getVariationsByGroupId(item.groupId);
+      if (variations.length > 0) {
+        setCurrentImage(variations[0]);
+        setSelectedId(variations[0].id);
+      } else {
+        setCurrentImage(item);
+        setSelectedId(item.id);
+      }
+    } else {
+      setCurrentImage(item);
+      setSelectedId(item.id);
+    }
+    
     // RELOAD ALL SETTINGS
     setGenerationOptions({
       prompt: item.prompt || '',
@@ -41,15 +55,36 @@ export const HistoryList: React.FC = () => {
       ratio: item.ratio || '1:1',
       lighting: item.lighting || '',
       mood: item.mood || '',
+      resolution: item.resolution || '1K',
+      variations: 1, // Reset to 1 when loading from existing image
     });
   };
 
   const handleDelete = async (id: string) => {
-    const deleted = await deleteItem(id);
-    if (deleted && selectedId === id) {
-      setCurrentImage(null);
-      setSelectedId(null);
-      resetGenerationOptions();
+    // Find the item to check if it has a groupId
+    const item = filteredHistory.find((i) => i.id === id);
+    
+    if (item?.groupId) {
+      // Delete all variations in the group
+      const variations = getVariationsByGroupId(item.groupId);
+      if (confirm(`Delete ${variations.length} variation${variations.length > 1 ? 's' : ''}?`)) {
+        for (const variation of variations) {
+          await deleteFromDB(variation.id);
+          removeFromHistory(variation.id);
+        }
+        if (variations.some((v) => v.id === selectedId)) {
+          setCurrentImage(null);
+          setSelectedId(null);
+          resetGenerationOptions();
+        }
+      }
+    } else {
+      const deleted = await deleteItem(id);
+      if (deleted && selectedId === id) {
+        setCurrentImage(null);
+        setSelectedId(null);
+        resetGenerationOptions();
+      }
     }
   };
 

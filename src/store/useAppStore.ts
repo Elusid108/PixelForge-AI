@@ -49,6 +49,8 @@ const defaultGenerationOptions: GenerationOptions = {
   ratio: '1:1',
   lighting: '',
   mood: '',
+  resolution: '1K',
+  variations: 1,
 };
 
 export const useAppStore = create<AppState>((set) => ({
