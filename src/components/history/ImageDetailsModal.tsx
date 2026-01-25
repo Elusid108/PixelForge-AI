@@ -52,7 +52,7 @@ export const ImageDetailsModal: React.FC = () => {
     setShowImageDetails,
     selectedImageDetails,
     setGenerationOptions,
-    setToast,
+    showToast,
     setSelectedImageDetails,
   } = useAppStore();
   const { generate } = useImageGeneration();
@@ -96,9 +96,9 @@ export const ImageDetailsModal: React.FC = () => {
   const handleCopy = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setToast({ message: `${label} copied to clipboard`, type: 'success' });
+      showToast(`${label} copied to clipboard`, 'success');
     } catch (err) {
-      setToast({ message: 'Failed to copy', type: 'error' });
+      showToast('Failed to copy', 'error');
     }
   };
 
@@ -143,7 +143,7 @@ export const ImageDetailsModal: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    setToast({ message: 'Metadata exported', type: 'success' });
+    showToast('Metadata exported', 'success');
   };
 
   const styleLabel = STYLES.find((s) => s.value === item.style)?.label || item.style || 'Default';

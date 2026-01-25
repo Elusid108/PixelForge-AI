@@ -1,10 +1,10 @@
 import React from 'react';
-import { Ban, Copy } from 'lucide-react';
+import { Ban, Copy, FileText } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Randomizer } from './Randomizer';
 
 export const PromptInput: React.FC = () => {
-  const { generationOptions, setGenerationOptions, setToast } = useAppStore();
+  const { generationOptions, setGenerationOptions, showToast, setShowTemplates } = useAppStore();
 
   const handleCopyPrompt = async () => {
     const fullPrompt = [
@@ -17,20 +17,27 @@ export const PromptInput: React.FC = () => {
       .join(' ');
 
     if (!fullPrompt.trim()) {
-      setToast({ message: 'No prompt to copy', type: 'info' });
+      showToast('No prompt to copy', 'info');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(fullPrompt);
-      setToast({ message: 'Prompt copied to clipboard', type: 'success' });
+      showToast('Prompt copied to clipboard', 'success');
     } catch (err) {
-      setToast({ message: 'Failed to copy prompt', type: 'error' });
+      showToast('Failed to copy prompt', 'error');
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Randomizer Section */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-gray-400 uppercase">Randomizer</label>
+        <Randomizer />
+      </div>
+
+      {/* Prompt Section */}
       <div className="space-y-2">
         <div className="flex justify-between items-end">
           <div className="flex items-center gap-2">
@@ -42,8 +49,14 @@ export const PromptInput: React.FC = () => {
             >
               <Copy size={14} />
             </button>
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="p-1 text-gray-500 hover:text-purple-400 transition-colors"
+              title="Manage prompt templates"
+            >
+              <FileText size={14} />
+            </button>
           </div>
-          <Randomizer />
         </div>
         <textarea
           value={generationOptions.prompt}

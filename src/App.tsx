@@ -28,6 +28,10 @@ const ImageDetailsModal = lazy(() =>
   }))
 );
 
+// ConfirmationModal is not lazy loaded since it's used frequently
+import { ConfirmationModal } from './components/common/ConfirmationModal';
+import { PromptTemplates } from './components/generation/PromptTemplates';
+
 function App() {
   const { processingStatus } = useAppStore();
 
@@ -36,6 +40,8 @@ function App() {
       {processingStatus && <StatusNotification message={processingStatus} />}
       <Toast />
 
+      <ConfirmationModal />
+      <PromptTemplates />
       <Suspense fallback={null}>
         <SettingsModal />
         <ShortcutsModal />

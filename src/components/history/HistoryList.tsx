@@ -1,5 +1,5 @@
-import React from 'react';
-import { History, X, CheckSquare, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, X, CheckSquare, ChevronLeft, Search } from 'lucide-react';
 import { useHistory } from '../../hooks/useHistory';
 import { useSelection } from '../../hooks/useSelection';
 import { useAppStore } from '../../store/useAppStore';
@@ -11,7 +11,7 @@ import { deleteFromDB } from '../../services/storage/indexedDB';
 import { createZipFromImages, downloadBlob } from '../../services/download/zipService';
 
 export const HistoryList: React.FC = () => {
-  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, deleteItem, getVariationsByGroupId } =
+  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, searchTerm, setSearchTerm, deleteItem, getVariationsByGroupId } =
     useHistory();
   const { selectionMode, selectedItems, toggleSelection, toggleSelectionMode, clearSelection, toggleSelectAll, isAllSelected } =
     useSelection(filteredHistory);
@@ -24,7 +24,17 @@ export const HistoryList: React.FC = () => {
     resetGenerationOptions,
     setGenerationOptions,
     removeFromHistory,
+    setConfirmationModal,
   } = useAppStore();
+  const [localSearchTerm, setLocalSearchTerm] = useState<string>('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(localSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearchTerm, setSearchTerm]);
 
   const handleSelectItem = (item: ImageItem) => {
     if (selectionMode) {
@@ -67,17 +77,22 @@ export const HistoryList: React.FC = () => {
     if (item?.groupId) {
       // Delete all variations in the group
       const variations = getVariationsByGroupId(item.groupId);
-      if (confirm(`Delete ${variations.length} variation${variations.length > 1 ? 's' : ''}?`)) {
-        for (const variation of variations) {
-          await deleteFromDB(variation.id);
-          removeFromHistory(variation.id);
-        }
-        if (variations.some((v) => v.id === selectedId)) {
-          setCurrentImage(null);
-          setSelectedId(null);
-          resetGenerationOptions();
-        }
-      }
+      setConfirmationModal({
+        title: 'Delete Variations',
+        message: `Are you sure you want to delete ${variations.length} variation${variations.length > 1 ? 's' : ''}?`,
+        confirmText: 'Delete',
+        onConfirm: async () => {
+          for (const variation of variations) {
+            await deleteFromDB(variation.id);
+            removeFromHistory(variation.id);
+          }
+          if (variations.some((v) => v.id === selectedId)) {
+            setCurrentImage(null);
+            setSelectedId(null);
+            resetGenerationOptions();
+          }
+        },
+      });
     } else {
       const deleted = await deleteItem(id);
       if (deleted && selectedId === id) {
@@ -89,18 +104,23 @@ export const HistoryList: React.FC = () => {
   };
 
   const handleBulkDelete = async (ids: Set<string>) => {
-    if (confirm(`Delete ${ids.size} items?`)) {
-      for (const id of ids) {
-        await deleteFromDB(id);
-        removeFromHistory(id);
-      }
-      clearSelection();
-      if (ids.has(selectedId || '')) {
-        setCurrentImage(null);
-        setSelectedId(null);
-        resetGenerationOptions();
-      }
-    }
+    setConfirmationModal({
+      title: 'Delete Items',
+      message: `Are you sure you want to delete ${ids.size} item${ids.size > 1 ? 's' : ''}?`,
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        for (const id of ids) {
+          await deleteFromDB(id);
+          removeFromHistory(id);
+        }
+        clearSelection();
+        if (ids.has(selectedId || '')) {
+          setCurrentImage(null);
+          setSelectedId(null);
+          resetGenerationOptions();
+        }
+      },
+    });
   };
 
   const handleBulkDownload = async (items: ImageItem[]) => {
@@ -138,6 +158,20 @@ export const HistoryList: React.FC = () => {
           >
             <ChevronLeft />
           </button>
+        </div>
+      </div>
+
+      {/* Search Input */}
+      <div className="p-3 border-b border-gray-800 bg-gray-900/50">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
+            placeholder="Search by prompt, filename, or style..."
+            className="w-full bg-gray-950 border border-gray-800 text-gray-300 text-xs rounded-lg p-2 pl-9 pr-3 focus:border-purple-500 outline-none placeholder-gray-600"
+          />
         </div>
       </div>
 

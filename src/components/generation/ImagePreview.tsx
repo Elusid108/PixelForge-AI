@@ -5,7 +5,7 @@ import { useHistory } from '../../hooks/useHistory';
 import { VariationGrid } from './VariationGrid';
 
 export const ImagePreview: React.FC = () => {
-  const { currentImage, setGenerationOptions, setToast, setShowImageDetails, setSelectedImageDetails } = useAppStore();
+  const { currentImage, setGenerationOptions, showToast, setShowImageDetails, setSelectedImageDetails } = useAppStore();
   const { getVariationsByGroupId } = useHistory();
 
   const variations = useMemo(() => {
@@ -27,7 +27,7 @@ export const ImagePreview: React.FC = () => {
       variations: 1, // Reset to 1 when loading from existing image
     });
 
-    setToast({ message: 'Parameters loaded from image', type: 'success' });
+    showToast('Parameters loaded from image', 'success');
   };
 
   const handleViewDetails = () => {

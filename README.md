@@ -25,6 +25,12 @@ A modern, scalable AI image generation application built with React, TypeScript,
 - 🔍 **Fullscreen Viewer**: Click any variation to view in fullscreen with navigation
 - 📥 **Individual Downloads**: Download each variation separately or the entire set as ZIP
 - 📏 **Image Resolution Display**: See actual pixel dimensions (e.g., 1024x1024) in image details
+- 🔍 **Search Functionality**: Real-time search through history by prompt, filename, or style
+- 📝 **Prompt Templates**: Save, organize, and quickly insert favorite prompts with categories
+- 🎲 **Enhanced Randomizer**: Three randomization modes (prompt only, style only, everything)
+- 🔍 **Enhanced Fullscreen Viewer**: Zoom, pan, and navigate images with mouse wheel support
+- 🔔 **Toast Notifications**: Stackable toast system with auto-dismiss and multiple variants
+- ✅ **Confirmation Modals**: User-friendly confirmation dialogs replace browser alerts
 
 ## Tech Stack
 
@@ -139,6 +145,7 @@ The app is automatically deployed to GitHub Pages via GitHub Actions on every pu
 
 3. **Manage History**:
    - View all generated images in the sidebar
+   - Search by prompt, filename, or style with real-time filtering
    - Filter by style or sort by date
    - Select multiple images for bulk download or deletion
    - Click on an image to reload its settings
@@ -162,8 +169,11 @@ The app is automatically deployed to GitHub Pages via GitHub Actions on every pu
 
 6. **Quick Actions**:
    - Copy full prompt with modifiers using the copy button next to the prompt label
+   - Save and manage prompt templates with categories
+   - Use randomizer with three modes: prompt only, style only, or everything
    - Reuse parameters from any image using "New from This" button
    - View complete image metadata and export as JSON
+   - Zoom and pan images in fullscreen viewer (Ctrl+Wheel to zoom)
 
 ## Development
 
@@ -202,7 +212,7 @@ API keys are stored in browser localStorage. They are never sent to any server e
 
 ### IndexedDB
 
-The application uses IndexedDB to store image history. The database name is `PixelForgeDB` with version 2.
+The application uses IndexedDB to store image history and prompt templates. The database name is `PixelForgeDB` with version 3 (includes templates store).
 
 ## Contributing
 
@@ -216,6 +226,15 @@ The application uses IndexedDB to store image history. The database name is `Pix
 MIT License - feel free to use this project for your own purposes.
 
 ## Recent Updates
+
+### v1.3.0 - Phase 2 High Priority Features
+
+- ✅ **Search Functionality**: Real-time search through history by prompt, filename, or style with debounced filtering
+- ✅ **Prompt Templates**: Save, organize, and quickly insert favorite prompts with category management
+- ✅ **Enhanced Randomizer Controls**: Three separate randomization modes (prompt only, style only, everything) with visual indicators
+- ✅ **Enhanced Fullscreen Viewer**: Zoom (1x-3x, fit-to-screen), pan/drag, mouse wheel zoom, and improved navigation
+- ✅ **Toast Notification System**: Stackable toasts with unlimited capacity, auto-dismiss, and smooth animations
+- ✅ **Confirmation Modals**: User-friendly confirmation dialogs replace browser confirm() dialogs
 
 ### v1.2.0 - Multi-Variation Support
 

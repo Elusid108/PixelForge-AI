@@ -4,9 +4,10 @@ import { getHistoryFromDB, deleteFromDB } from '../services/storage/indexedDB';
 import { ImageItem } from '../types';
 
 export const useHistory = () => {
-  const { history, setHistory, removeFromHistory } = useAppStore();
+  const { history, setHistory, removeFromHistory, setConfirmationModal } = useAppStore();
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [filterStyle, setFilterStyle] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
     refreshHistory();
@@ -23,6 +24,17 @@ export const useHistory = () => {
 
   const filteredHistory = useMemo(() => {
     let result = [...history];
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter((item) => {
+        const promptMatch = item.prompt?.toLowerCase().includes(searchLower);
+        const filenameMatch = item.filename?.toLowerCase().includes(searchLower);
+        const styleMatch = item.style?.toLowerCase().includes(searchLower);
+        return promptMatch || filenameMatch || styleMatch;
+      });
+    }
 
     if (filterStyle !== 'ALL') {
       result = result.filter((item) => item.style === filterStyle);
@@ -60,15 +72,24 @@ export const useHistory = () => {
     });
 
     return combined;
-  }, [history, sortBy, filterStyle]);
+  }, [history, sortBy, filterStyle, searchTerm]);
 
-  const deleteItem = async (id: string) => {
-    if (confirm('Delete this image?')) {
-      await deleteFromDB(id);
-      removeFromHistory(id);
-      return true;
-    }
-    return false;
+  const deleteItem = async (id: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setConfirmationModal({
+        title: 'Delete Image',
+        message: 'Are you sure you want to delete this image?',
+        confirmText: 'Delete',
+        onConfirm: async () => {
+          await deleteFromDB(id);
+          removeFromHistory(id);
+          resolve(true);
+        },
+        onCancel: () => {
+          resolve(false);
+        },
+      });
+    });
   };
 
   const getVariationsByGroupId = (groupId: string): ImageItem[] => {
@@ -84,6 +105,8 @@ export const useHistory = () => {
     setSortBy,
     filterStyle,
     setFilterStyle,
+    searchTerm,
+    setSearchTerm,
     refreshHistory,
     deleteItem,
     getVariationsByGroupId,

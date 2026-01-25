@@ -2,19 +2,18 @@ import React, { useEffect } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
-export const Toast: React.FC = () => {
-  const { toast, setToast } = useAppStore();
+interface ToastItemProps {
+  toast: { id: string; message: string; type: 'success' | 'error' | 'info' };
+  onRemove: (id: string) => void;
+}
 
+const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast, setToast]);
-
-  if (!toast) return null;
+    const timer = setTimeout(() => {
+      onRemove(toast.id);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [toast.id, onRemove]);
 
   const icons = {
     success: <CheckCircle size={18} className="text-green-400" />,
@@ -29,19 +28,31 @@ export const Toast: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-slide-in-right">
-      <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl backdrop-blur-md min-w-[200px] max-w-[400px] ${bgColors[toast.type]}`}
+    <div
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl backdrop-blur-md min-w-[200px] max-w-[400px] animate-slide-in-right ${bgColors[toast.type]}`}
+    >
+      {icons[toast.type]}
+      <span className="text-sm text-gray-100 flex-1">{toast.message}</span>
+      <button
+        onClick={() => onRemove(toast.id)}
+        className="text-gray-400 hover:text-white transition-colors"
       >
-        {icons[toast.type]}
-        <span className="text-sm text-gray-100 flex-1">{toast.message}</span>
-        <button
-          onClick={() => setToast(null)}
-          className="text-gray-400 hover:text-white transition-colors"
-        >
-          <X size={16} />
-        </button>
-      </div>
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
+export const Toast: React.FC = () => {
+  const { toasts, removeToast } = useAppStore();
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-h-[80vh] overflow-y-auto">
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
+      ))}
     </div>
   );
 };

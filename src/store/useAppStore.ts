@@ -32,14 +32,33 @@ interface AppState {
   setError: (error: string | null) => void;
   processingStatus: string | null;
   setProcessingStatus: (status: string | null) => void;
-  toast: { message: string; type: 'success' | 'error' | 'info' } | null;
-  setToast: (toast: { message: string; type: 'success' | 'error' | 'info' } | null) => void;
+  toasts: Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
   showShortcuts: boolean;
   setShowShortcuts: (show: boolean) => void;
   showImageDetails: boolean;
   setShowImageDetails: (show: boolean) => void;
   selectedImageDetails: ImageItem | null;
   setSelectedImageDetails: (image: ImageItem | null) => void;
+  confirmationModal: {
+    title?: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  } | null;
+  setConfirmationModal: (
+    modal: {
+      title?: string;
+      message: string;
+      confirmText?: string;
+      onConfirm: () => void;
+      onCancel?: () => void;
+    } | null
+  ) => void;
+  showTemplates: boolean;
+  setShowTemplates: (show: boolean) => void;
 }
 
 const defaultGenerationOptions: GenerationOptions = {
@@ -89,12 +108,26 @@ export const useAppStore = create<AppState>((set) => ({
   setError: (error: string | null) => set({ error }),
   processingStatus: null,
   setProcessingStatus: (status: string | null) => set({ processingStatus: status }),
-  toast: null,
-  setToast: (toast: { message: string; type: 'success' | 'error' | 'info' } | null) => set({ toast }),
+  toasts: [],
+  showToast: (message: string, type: 'success' | 'error' | 'info') =>
+    set((state) => ({
+      toasts: [
+        ...state.toasts,
+        { id: crypto.randomUUID(), message, type },
+      ],
+    })),
+  removeToast: (id: string) =>
+    set((state) => ({
+      toasts: state.toasts.filter((toast) => toast.id !== id),
+    })),
   showShortcuts: false,
   setShowShortcuts: (show: boolean) => set({ showShortcuts: show }),
   showImageDetails: false,
   setShowImageDetails: (show: boolean) => set({ showImageDetails: show }),
   selectedImageDetails: null,
   setSelectedImageDetails: (image: ImageItem | null) => set({ selectedImageDetails: image }),
+  confirmationModal: null,
+  setConfirmationModal: (modal) => set({ confirmationModal: modal }),
+  showTemplates: false,
+  setShowTemplates: (show: boolean) => set({ showTemplates: show }),
 }));

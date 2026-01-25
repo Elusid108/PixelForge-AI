@@ -72,3 +72,11 @@ export interface ImagenResponse {
     message?: string;
   };
 }
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  prompt: string;
+  category: string;
+  createdAt: number;
+}
