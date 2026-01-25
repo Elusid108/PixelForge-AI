@@ -1,0 +1,45 @@
+import React from 'react';
+import { Download, Image as ImageIcon } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+
+export const ImagePreview: React.FC = () => {
+  const { currentImage } = useAppStore();
+
+  const handleDownload = (item: typeof currentImage) => {
+    if (!item) return;
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${item.base64}`;
+    link.download = item.filename ? `${item.filename}.png` : `pixelforge-${item.timestamp}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="flex-1 bg-gray-950 p-6 flex items-center justify-center relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-gray-950">
+      {currentImage ? (
+        <div className="relative group max-w-full max-h-full animate-in fade-in zoom-in duration-300">
+          <img
+            src={`data:image/png;base64,${currentImage.base64}`}
+            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl border border-gray-800"
+            alt={currentImage.filename || currentImage.prompt}
+          />
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            <button
+              onClick={() => handleDownload(currentImage)}
+              className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-md transition-colors border border-white/10"
+              title="Download to Computer"
+            >
+              <Download size={20} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center opacity-30">
+          <ImageIcon className="w-16 h-16 mx-auto mb-4" />
+          <p>Ready to create</p>
+        </div>
+      )}
+    </div>
+  );
+};
