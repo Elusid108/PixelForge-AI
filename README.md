@@ -14,6 +14,11 @@ A modern, scalable AI image generation application built with React, TypeScript,
 - ⚡ **Performance**: Code splitting, lazy loading, and React optimizations
 - 🔔 **Status Notifications**: Real-time status updates during generation and randomization
 - 🔄 **API Compatibility**: Automatic API version fallback for optimal compatibility
+- 📋 **Copy Prompt**: One-click copy of full prompt with modifiers
+- ⌨️ **Keyboard Shortcuts**: Power user shortcuts for faster workflow
+- 📊 **Image Details**: View full metadata, regenerate, or export as JSON
+- ⏱️ **Generation Time**: Track and display how long each image took to generate
+- 🔄 **New from This**: Quickly reuse parameters from any previous image
 
 ## Tech Stack
 
@@ -115,10 +120,25 @@ Preview the production build locally.
    - Filter by style or sort by date
    - Select multiple images for bulk download or deletion
    - Click on an image to reload its settings
+   - View details (hover over item and click info icon) to see full metadata
+   - See generation time for each image
 
 4. **Download Images**:
    - Single: Click the download button on the preview
    - Bulk: Enable selection mode, select images, then download as ZIP
+
+5. **Keyboard Shortcuts**:
+   - `Ctrl/Cmd + R` - Randomize prompt
+   - `Ctrl/Cmd + G` - Generate image
+   - `Ctrl/Cmd + K` - Focus prompt input
+   - `Ctrl/Cmd + /` - Show/hide shortcuts help
+   - `Esc` - Close modals
+   - `Space` - Quick randomize (when prompt is focused)
+
+6. **Quick Actions**:
+   - Copy full prompt with modifiers using the copy button next to the prompt label
+   - Reuse parameters from any image using "New from This" button
+   - View complete image metadata and export as JSON
 
 ## Development
 
@@ -171,6 +191,15 @@ The application uses IndexedDB to store image history. The database name is `Pix
 MIT License - feel free to use this project for your own purposes.
 
 ## Recent Updates
+
+### v1.1.0 - Phase 1 Quick Wins
+
+- ✅ **Copy Prompt Button**: Copy full prompt with modifiers to clipboard with toast notification
+- ✅ **Keyboard Shortcuts**: Complete keyboard shortcut system (Ctrl/Cmd+R for randomize, Ctrl/Cmd+G for generate, Ctrl/Cmd+K to focus prompt, Ctrl/Cmd+/ for help, Space for quick randomize, Esc to close modals)
+- ✅ **Image Details Modal**: View complete metadata, copy individual fields, regenerate with same parameters, or export metadata as JSON
+- ✅ **Generation Time Display**: Track and display generation time for each image in history
+- ✅ **"New from This" Button**: Quickly reuse all parameters from any previous image
+- ✅ **Toast Notification System**: Non-intrusive toast notifications for user feedback
 
 ### v1.0.0
 

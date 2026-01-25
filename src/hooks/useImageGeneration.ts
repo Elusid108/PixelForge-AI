@@ -21,6 +21,8 @@ export const useImageGeneration = () => {
     setProcessingStatus('Dreaming up image...');
     setError(null);
 
+    const startTime = Date.now();
+
     try {
       // 1. Generate Image
       const modifiers = generationOptions.style + generationOptions.lighting + generationOptions.mood;
@@ -41,6 +43,7 @@ export const useImageGeneration = () => {
       }
 
       setProcessingStatus('Saving to gallery...');
+      const generationTime = Date.now() - startTime;
       const newItem: ImageItem = {
         id: crypto.randomUUID(),
         timestamp: Date.now(),
@@ -52,6 +55,7 @@ export const useImageGeneration = () => {
         mood: generationOptions.mood,
         base64: newImageBase64,
         filename: filename,
+        generationTime: generationTime,
       };
 
       await saveToDB(newItem);

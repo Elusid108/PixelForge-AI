@@ -2,6 +2,7 @@ import React from 'react';
 import { PlusCircle, Wand2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useImageGeneration } from '../../hooks/useImageGeneration';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { PromptInput } from '../generation/PromptInput';
 import { GenerationControls } from '../generation/GenerationControls';
 import { ImagePreview } from '../generation/ImagePreview';
@@ -10,6 +11,7 @@ import { ErrorDisplay } from '../common/ErrorDisplay';
 export const Workspace: React.FC = () => {
   const { generationOptions, resetGenerationOptions, error } = useAppStore();
   const { isGenerating, generate } = useImageGeneration();
+  useKeyboardShortcuts();
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

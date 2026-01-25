@@ -1,8 +1,22 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Info } from 'lucide-react';
 import { ImageItem } from '../../types';
 import { STYLES } from '../../constants/styles';
 import { Checkbox } from '../common/Checkbox';
+import { useAppStore } from '../../store/useAppStore';
+
+const formatGenerationTime = (ms: number): string => {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+  const seconds = ms / 1000;
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+};
 
 interface HistoryItemProps {
   item: ImageItem;
@@ -23,6 +37,8 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
   onDelete,
   onClick,
 }) => {
+  const { setShowImageDetails, setSelectedImageDetails } = useAppStore();
+
   const handleClick = () => {
     if (selectionMode) {
       onSelect(item.id);
@@ -34,6 +50,12 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(item.id);
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedImageDetails(item);
+    setShowImageDetails(true);
   };
 
   return (
@@ -75,9 +97,16 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
       <div className="min-w-0 flex-1">
         <p className="text-xs text-gray-300 truncate font-medium">{item.filename || item.prompt}</p>
         <div className="flex justify-between items-center mt-0.5">
-          <p className="text-[10px] text-gray-500">
-            {new Date(item.timestamp).toLocaleTimeString()}
-          </p>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[10px] text-gray-500">
+              {new Date(item.timestamp).toLocaleTimeString()}
+            </p>
+            {item.generationTime && (
+              <p className="text-[9px] text-gray-600">
+                {formatGenerationTime(item.generationTime)}
+              </p>
+            )}
+          </div>
           {item.style && (
             <span className="text-[9px] bg-gray-800 text-gray-400 px-1.5 rounded truncate max-w-[60px]">
               {STYLES.find((s) => s.value === item.style)?.label || 'Custom'}
@@ -86,12 +115,22 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
         </div>
       </div>
       {!selectionMode && (
-        <button
-          onClick={handleDelete}
-          className="absolute right-2 top-2 p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <Trash2 size={12} />
-        </button>
+        <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleViewDetails}
+            className="p-1.5 bg-gray-800 text-gray-500 hover:text-purple-400 rounded transition-colors"
+            title="View Details"
+          >
+            <Info size={12} />
+          </button>
+          <button
+            onClick={handleDelete}
+            className="p-1.5 bg-gray-800 text-gray-500 hover:text-red-400 rounded transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
       )}
     </div>
   );

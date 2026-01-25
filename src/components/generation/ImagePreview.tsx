@@ -1,9 +1,30 @@
 import React from 'react';
-import { Download, Image as ImageIcon } from 'lucide-react';
+import { Download, Image as ImageIcon, RefreshCw, Info } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 export const ImagePreview: React.FC = () => {
-  const { currentImage } = useAppStore();
+  const { currentImage, setGenerationOptions, setToast, setShowImageDetails, setSelectedImageDetails } = useAppStore();
+
+  const handleNewFromThis = () => {
+    if (!currentImage) return;
+
+    setGenerationOptions({
+      prompt: currentImage.prompt,
+      negativePrompt: currentImage.negativePrompt || '',
+      style: currentImage.style || '',
+      ratio: currentImage.ratio || '1:1',
+      lighting: currentImage.lighting || '',
+      mood: currentImage.mood || '',
+    });
+
+    setToast({ message: 'Parameters loaded from image', type: 'success' });
+  };
+
+  const handleViewDetails = () => {
+    if (!currentImage) return;
+    setSelectedImageDetails(currentImage);
+    setShowImageDetails(true);
+  };
 
   const handleDownload = (item: typeof currentImage) => {
     if (!item) return;
@@ -25,6 +46,20 @@ export const ImagePreview: React.FC = () => {
             alt={currentImage.filename || currentImage.prompt}
           />
           <div className="absolute bottom-4 right-4 flex gap-2">
+            <button
+              onClick={handleViewDetails}
+              className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-md transition-colors border border-white/10"
+              title="View Details"
+            >
+              <Info size={20} />
+            </button>
+            <button
+              onClick={handleNewFromThis}
+              className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-md transition-colors border border-white/10"
+              title="New from This - Reuse Parameters"
+            >
+              <RefreshCw size={20} />
+            </button>
             <button
               onClick={() => handleDownload(currentImage)}
               className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-md transition-colors border border-white/10"

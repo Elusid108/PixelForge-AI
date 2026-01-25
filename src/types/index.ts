@@ -34,6 +34,7 @@ export interface ImageItem {
   mood: string;
   base64: string;
   filename: string;
+  generationTime?: number; // in milliseconds
 }
 
 export interface GenerationOptions {

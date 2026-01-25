@@ -3,6 +3,7 @@ import { Header } from './components/layout/Header';
 import { Workspace } from './components/layout/Workspace';
 import { HistoryList } from './components/history/HistoryList';
 import { StatusNotification } from './components/common/StatusNotification';
+import { Toast } from './components/common/Toast';
 import { useAppStore } from './store/useAppStore';
 import './styles/globals.css';
 
@@ -13,15 +14,32 @@ const SettingsModal = lazy(() =>
   }))
 );
 
+// Lazy load ShortcutsModal for code splitting
+const ShortcutsModal = lazy(() =>
+  import('./components/common/ShortcutsModal').then((module) => ({
+    default: module.ShortcutsModal,
+  }))
+);
+
+// Lazy load ImageDetailsModal for code splitting
+const ImageDetailsModal = lazy(() =>
+  import('./components/history/ImageDetailsModal').then((module) => ({
+    default: module.ImageDetailsModal,
+  }))
+);
+
 function App() {
   const { processingStatus } = useAppStore();
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 font-sans overflow-hidden relative">
       {processingStatus && <StatusNotification message={processingStatus} />}
+      <Toast />
 
       <Suspense fallback={null}>
         <SettingsModal />
+        <ShortcutsModal />
+        <ImageDetailsModal />
       </Suspense>
       <HistoryList />
 

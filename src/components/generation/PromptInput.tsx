@@ -1,16 +1,48 @@
 import React from 'react';
-import { Ban } from 'lucide-react';
+import { Ban, Copy } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Randomizer } from './Randomizer';
 
 export const PromptInput: React.FC = () => {
-  const { generationOptions, setGenerationOptions } = useAppStore();
+  const { generationOptions, setGenerationOptions, setToast } = useAppStore();
+
+  const handleCopyPrompt = async () => {
+    const fullPrompt = [
+      generationOptions.prompt,
+      generationOptions.style,
+      generationOptions.lighting,
+      generationOptions.mood,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    if (!fullPrompt.trim()) {
+      setToast({ message: 'No prompt to copy', type: 'info' });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(fullPrompt);
+      setToast({ message: 'Prompt copied to clipboard', type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Failed to copy prompt', type: 'error' });
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <div className="flex justify-between items-end">
-          <label className="text-xs font-semibold text-gray-400 uppercase mb-1">Prompt</label>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-gray-400 uppercase mb-1">Prompt</label>
+            <button
+              onClick={handleCopyPrompt}
+              className="p-1 text-gray-500 hover:text-purple-400 transition-colors"
+              title="Copy full prompt with modifiers"
+            >
+              <Copy size={14} />
+            </button>
+          </div>
           <Randomizer />
         </div>
         <textarea
