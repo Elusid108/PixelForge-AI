@@ -11,7 +11,7 @@ import { deleteFromDB } from '../../services/storage/indexedDB';
 import { createZipFromImages, downloadBlob } from '../../services/download/zipService';
 
 export const HistoryList: React.FC = () => {
-  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, searchTerm, setSearchTerm, deleteItem, getVariationsByGroupId } =
+  const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, setSearchTerm, deleteItem, getVariationsByGroupId } =
     useHistory();
   const { selectionMode, selectedItems, toggleSelection, toggleSelectionMode, clearSelection, toggleSelectAll, isAllSelected } =
     useSelection(filteredHistory);

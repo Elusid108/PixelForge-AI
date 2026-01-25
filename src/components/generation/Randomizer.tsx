@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, CheckSquare, Dices, Type, Palette, Sparkles } from 'lucide-react';
+import { ChevronDown, CheckSquare, Type, Palette, Sparkles } from 'lucide-react';
 import { useRandomizer } from '../../hooks/useRandomizer';
 
 export const Randomizer: React.FC = () => {

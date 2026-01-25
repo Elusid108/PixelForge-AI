@@ -13,7 +13,7 @@ export const useRandomizer = () => {
   const [isRandomizing, setIsRandomizing] = useState(false);
   const [randomType, setRandomType] = useState<string>('ANY');
   const [isRandomizerOpen, setIsRandomizerOpen] = useState(false);
-  const { apiKey, generationOptions, setGenerationOptions, setError, setShowSettings, setProcessingStatus } = useAppStore();
+  const { apiKey, setGenerationOptions, setError, setShowSettings, setProcessingStatus } = useAppStore();
 
   const randomize = async (mode: RandomizeMode = 'everything') => {
     if (!apiKey) {
