@@ -106,6 +106,21 @@ npm run preview
 
 Preview the production build locally.
 
+### Deployment
+
+The app is automatically deployed to GitHub Pages via GitHub Actions on every push to `main`.
+
+**Manual Deployment:**
+1. Build the app: `npm run build`
+2. The `dist/` folder contains the production files
+3. Deploy the `dist/` folder contents to your hosting service
+
+**GitHub Pages Setup:**
+1. Go to your repository Settings → Pages
+2. Under "Source", select "GitHub Actions"
+3. The workflow will automatically build and deploy on each push to `main`
+4. Your app will be available at: `https://[username].github.io/PixelForge-AI/`
+
 ## Usage
 
 1. **Set API Key**: On first launch, you'll be prompted to enter your Google Gemini API key. This is stored locally in your browser.

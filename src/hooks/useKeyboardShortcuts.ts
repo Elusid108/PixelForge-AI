@@ -11,8 +11,6 @@ export const useKeyboardShortcuts = () => {
     setShowShortcuts,
     showImageDetails,
     setShowImageDetails,
-    sidebarOpen,
-    setSidebarOpen,
   } = useAppStore();
   const { randomize } = useRandomizer();
   const { generate } = useImageGeneration();

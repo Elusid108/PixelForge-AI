@@ -1,7 +1,6 @@
 import React from 'react';
 import { X, Copy, RefreshCw, Download, Image as ImageIcon } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { ImageItem } from '../../types';
 import { STYLES } from '../../constants/styles';
 import { RATIOS } from '../../constants/ratios';
 import { LIGHTING } from '../../constants/lighting';
