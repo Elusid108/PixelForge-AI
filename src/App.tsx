@@ -30,6 +30,7 @@ const ImageDetailsModal = lazy(() =>
 
 // ConfirmationModal is not lazy loaded since it's used frequently
 import { ConfirmationModal } from './components/common/ConfirmationModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PromptTemplates } from './components/generation/PromptTemplates';
 
 function App() {
@@ -47,7 +48,9 @@ function App() {
         <ShortcutsModal />
         <ImageDetailsModal />
       </Suspense>
-      <HistoryList />
+      <ErrorBoundary>
+        <HistoryList />
+      </ErrorBoundary>
 
       <div className="flex-1 flex flex-col relative h-full">
         <Header />

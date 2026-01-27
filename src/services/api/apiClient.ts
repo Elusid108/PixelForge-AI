@@ -96,7 +96,7 @@ export const callTextAI = async (
     } catch (e) {
       const error = e as Error;
       // Only log if it's not an expected "not found" error (these are normal fallback attempts)
-      if (!error.message.includes('not found') && !error.message.includes('404')) {
+      if (import.meta.env.DEV && !error.message.includes('not found') && !error.message.includes('404')) {
         console.warn(`Attempt with ${model} failed:`, error.message);
       }
       lastError = error;

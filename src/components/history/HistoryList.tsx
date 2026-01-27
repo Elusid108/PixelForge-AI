@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { History, X, CheckSquare, ChevronLeft, Search } from 'lucide-react';
 import { useHistory } from '../../hooks/useHistory';
 import { useSelection } from '../../hooks/useSelection';
@@ -9,6 +9,13 @@ import { BulkActions } from './BulkActions';
 import { HistoryItem } from './HistoryItem';
 import { deleteFromDB } from '../../services/storage/indexedDB';
 import { createZipFromImages, downloadBlob } from '../../services/download/zipService';
+import { DEBUG_HISTORY, debugHistory } from '../../utils/debug';
+
+export interface HistoryItemWithPreview {
+  item: ImageItem;
+  variationCount: number;
+  previewVariations: ImageItem[];
+}
 
 export const HistoryList: React.FC = () => {
   const { filteredHistory, sortBy, setSortBy, filterStyle, setFilterStyle, setSearchTerm, deleteItem, getVariationsByGroupId } =
@@ -28,6 +35,26 @@ export const HistoryList: React.FC = () => {
   } = useAppStore();
   const [localSearchTerm, setLocalSearchTerm] = useState<string>('');
 
+  const renderCountRef = useRef(0);
+  if (DEBUG_HISTORY) {
+    renderCountRef.current += 1;
+    debugHistory('HistoryList render', renderCountRef.current);
+  }
+
+  const filteredHistoryWithPreviews = useMemo(() => {
+    return filteredHistory.map((item) => {
+      if (!item.groupId) {
+        return { item, variationCount: 1, previewVariations: [item] };
+      }
+      const variations = getVariationsByGroupId(item.groupId);
+      return {
+        item,
+        variationCount: variations.length,
+        previewVariations: variations.slice(0, 4),
+      };
+    });
+  }, [filteredHistory, getVariationsByGroupId]);
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,94 +63,124 @@ export const HistoryList: React.FC = () => {
     return () => clearTimeout(timer);
   }, [localSearchTerm, setSearchTerm]);
 
-  const handleSelectItem = (item: ImageItem) => {
-    if (selectionMode) {
-      toggleSelection(item.id);
-      return;
-    }
-    
-    // If item has a groupId, get all variations and set the first one
-    if (item.groupId) {
-      const variations = getVariationsByGroupId(item.groupId);
-      if (variations.length > 0) {
-        setCurrentImage(variations[0]);
-        setSelectedId(variations[0].id);
+  const handleSelectItem = useCallback(
+    (item: ImageItem) => {
+      if (selectionMode) {
+        toggleSelection(item.id);
+        return;
+      }
+
+      if (item.groupId) {
+        const variations = getVariationsByGroupId(item.groupId);
+        if (variations.length > 0) {
+          setCurrentImage(variations[0]);
+          setSelectedId(variations[0].id);
+        } else {
+          setCurrentImage(item);
+          setSelectedId(item.id);
+        }
       } else {
         setCurrentImage(item);
         setSelectedId(item.id);
       }
-    } else {
-      setCurrentImage(item);
-      setSelectedId(item.id);
-    }
-    
-    // RELOAD ALL SETTINGS
-    setGenerationOptions({
-      prompt: item.prompt || '',
-      negativePrompt: item.negativePrompt || '',
-      style: item.style || '',
-      ratio: item.ratio || '1:1',
-      lighting: item.lighting || '',
-      mood: item.mood || '',
-      resolution: item.resolution || '1K',
-      variations: 1, // Reset to 1 when loading from existing image
-    });
-  };
 
-  const handleDelete = async (id: string) => {
-    // Find the item to check if it has a groupId
-    const item = filteredHistory.find((i) => i.id === id);
-    
-    if (item?.groupId) {
-      // Delete all variations in the group
-      const variations = getVariationsByGroupId(item.groupId);
+      setGenerationOptions({
+        prompt: item.prompt || '',
+        negativePrompt: item.negativePrompt || '',
+        style: item.style || '',
+        ratio: item.ratio || '1:1',
+        lighting: item.lighting || '',
+        mood: item.mood || '',
+        resolution: item.resolution || '1K',
+        variations: 1,
+      });
+    },
+    [
+      selectionMode,
+      toggleSelection,
+      getVariationsByGroupId,
+      setCurrentImage,
+      setSelectedId,
+      setGenerationOptions,
+    ]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const item = filteredHistory.find((i) => i.id === id);
+
+      if (item?.groupId) {
+        const variations = getVariationsByGroupId(item.groupId);
+        setConfirmationModal({
+          title: 'Delete Variations',
+          message: `Are you sure you want to delete ${variations.length} variation${variations.length > 1 ? 's' : ''}?`,
+          confirmText: 'Delete',
+          onConfirm: async () => {
+            for (const variation of variations) {
+              await deleteFromDB(variation.id);
+              removeFromHistory(variation.id);
+            }
+            if (variations.some((v) => v.id === selectedId)) {
+              setCurrentImage(null);
+              setSelectedId(null);
+              resetGenerationOptions();
+            }
+          },
+        });
+      } else {
+        const deleted = await deleteItem(id);
+        if (deleted && selectedId === id) {
+          setCurrentImage(null);
+          setSelectedId(null);
+          resetGenerationOptions();
+        }
+      }
+    },
+    [
+      filteredHistory,
+      getVariationsByGroupId,
+      setConfirmationModal,
+      deleteItem,
+      selectedId,
+      setCurrentImage,
+      setSelectedId,
+      resetGenerationOptions,
+      removeFromHistory,
+    ]
+  );
+
+  const handleBulkDelete = useCallback(
+    (ids: Set<string>) => {
       setConfirmationModal({
-        title: 'Delete Variations',
-        message: `Are you sure you want to delete ${variations.length} variation${variations.length > 1 ? 's' : ''}?`,
+        title: 'Delete Items',
+        message: `Are you sure you want to delete ${ids.size} item${ids.size > 1 ? 's' : ''}?`,
         confirmText: 'Delete',
         onConfirm: async () => {
-          for (const variation of variations) {
-            await deleteFromDB(variation.id);
-            removeFromHistory(variation.id);
+          for (const id of ids) {
+            await deleteFromDB(id);
+            removeFromHistory(id);
           }
-          if (variations.some((v) => v.id === selectedId)) {
+          clearSelection();
+          if (ids.has(selectedId || '')) {
             setCurrentImage(null);
             setSelectedId(null);
             resetGenerationOptions();
           }
         },
       });
-    } else {
-      const deleted = await deleteItem(id);
-      if (deleted && selectedId === id) {
-        setCurrentImage(null);
-        setSelectedId(null);
-        resetGenerationOptions();
-      }
-    }
-  };
+    },
+    [
+      setConfirmationModal,
+      clearSelection,
+      selectedId,
+      setCurrentImage,
+      setSelectedId,
+      resetGenerationOptions,
+      removeFromHistory,
+    ]
+  );
 
-  const handleBulkDelete = async (ids: Set<string>) => {
-    setConfirmationModal({
-      title: 'Delete Items',
-      message: `Are you sure you want to delete ${ids.size} item${ids.size > 1 ? 's' : ''}?`,
-      confirmText: 'Delete',
-      onConfirm: async () => {
-        for (const id of ids) {
-          await deleteFromDB(id);
-          removeFromHistory(id);
-        }
-        clearSelection();
-        if (ids.has(selectedId || '')) {
-          setCurrentImage(null);
-          setSelectedId(null);
-          resetGenerationOptions();
-        }
-      },
-    });
-  };
-
-  const handleBulkDownload = async (items: ImageItem[]) => {
+  const handleBulkDownload = useCallback(async (items: ImageItem[]) => {
     try {
       const blob = await createZipFromImages(items);
       downloadBlob(blob, 'pixelforge_batch.zip');
@@ -131,7 +188,7 @@ export const HistoryList: React.FC = () => {
       console.error('Zip failed', e);
       useAppStore.getState().setError('Failed to zip files');
     }
-  };
+  }, []);
 
   return (
     <div
@@ -194,15 +251,17 @@ export const HistoryList: React.FC = () => {
       )}
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {filteredHistory.length === 0 ? (
+        {filteredHistoryWithPreviews.length === 0 ? (
           <div className="text-center text-gray-600 mt-10 text-xs">
             No history yet
           </div>
         ) : (
-          filteredHistory.map((item) => (
+          filteredHistoryWithPreviews.map(({ item, variationCount, previewVariations }) => (
             <HistoryItem
               key={item.id}
               item={item}
+              variationCount={variationCount}
+              previewVariations={previewVariations}
               isSelected={selectedItems.has(item.id)}
               isActive={selectedId === item.id}
               selectionMode={selectionMode}

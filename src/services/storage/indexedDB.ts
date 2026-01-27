@@ -5,8 +5,12 @@ const STORE_NAME = 'history';
 const TEMPLATES_STORE_NAME = 'templates';
 const DB_VERSION = 3; // Upgraded version for templates store
 
+/** Single shared DB connection; reused across all operations. */
+let dbPromise: Promise<IDBDatabase> | null = null;
+
 export const initDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -23,6 +27,7 @@ export const initDB = (): Promise<IDBDatabase> => {
       }
     };
   });
+  return dbPromise;
 };
 
 export const saveToDB = async (item: ImageItem): Promise<void> => {

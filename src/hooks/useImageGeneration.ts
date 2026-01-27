@@ -43,7 +43,9 @@ export const useImageGeneration = () => {
       try {
         baseFilename = await generateFilename(apiKey, generationOptions.prompt);
       } catch (e) {
-        console.warn('Filename generation failed, using default', e);
+        if (import.meta.env.DEV) {
+          console.warn('Filename generation failed, using default', e);
+        }
       }
 
       // 3. Create ImageItem for each variation

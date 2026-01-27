@@ -4,7 +4,6 @@ import { ImageItem } from '../../types';
 import { STYLES } from '../../constants/styles';
 import { Checkbox } from '../common/Checkbox';
 import { useAppStore } from '../../store/useAppStore';
-import { useHistory } from '../../hooks/useHistory';
 
 const formatGenerationTime = (ms: number): string => {
   if (ms < 1000) {
@@ -21,6 +20,8 @@ const formatGenerationTime = (ms: number): string => {
 
 interface HistoryItemProps {
   item: ImageItem;
+  variationCount: number;
+  previewVariations: ImageItem[];
   isSelected: boolean;
   isActive: boolean;
   selectionMode: boolean;
@@ -29,19 +30,18 @@ interface HistoryItemProps {
   onClick: (item: ImageItem) => void;
 }
 
-export const HistoryItem: React.FC<HistoryItemProps> = ({
+export const HistoryItem = React.memo<HistoryItemProps>(function HistoryItem({
   item,
+  variationCount,
+  previewVariations,
   isSelected,
   isActive,
   selectionMode,
   onSelect,
   onDelete,
   onClick,
-}) => {
+}) {
   const { setShowImageDetails, setSelectedImageDetails } = useAppStore();
-  const { getVariationsByGroupId } = useHistory();
-  
-  const variationCount = item.groupId ? getVariationsByGroupId(item.groupId).length : 0;
 
   const handleClick = () => {
     if (selectionMode) {
@@ -93,17 +93,15 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
       >
         {variationCount > 1 ? (
           <div className="grid grid-cols-2 w-full h-full">
-            {getVariationsByGroupId(item.groupId!)
-              .slice(0, 4)
-              .map((variation, idx) => (
-                <img
-                  key={variation.id}
-                  src={`data:image/png;base64,${variation.base64}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  alt={`${item.filename || item.prompt} - ${idx + 1}`}
-                />
-              ))}
+            {previewVariations.map((variation, idx) => (
+              <img
+                key={variation.id}
+                src={`data:image/png;base64,${variation.base64}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                alt={`${item.filename || item.prompt} - ${idx + 1}`}
+              />
+            ))}
           </div>
         ) : (
           <img
@@ -164,4 +162,4 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
       )}
     </div>
   );
-};
+});

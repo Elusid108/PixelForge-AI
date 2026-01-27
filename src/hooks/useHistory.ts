@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { getHistoryFromDB, deleteFromDB } from '../services/storage/indexedDB';
 import { ImageItem } from '../types';
+import { DEBUG_HISTORY, debugHistory } from '../utils/debug';
 
 export const useHistory = () => {
   const { history, setHistory, removeFromHistory, setConfirmationModal } = useAppStore();
@@ -9,18 +10,26 @@ export const useHistory = () => {
   const [filterStyle, setFilterStyle] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  useEffect(() => {
-    refreshHistory();
-  }, []);
-
-  const refreshHistory = async () => {
+  const refreshHistory = useCallback(async () => {
     try {
+      const t0 = performance.now();
       const data = await getHistoryFromDB();
+      const t1 = performance.now();
       setHistory(data);
+      const t2 = performance.now();
+      debugHistory('load', { fetchMs: t1 - t0, setStateMs: t2 - t1, count: data.length });
+      if (DEBUG_HISTORY) {
+        const base64Bytes = data.reduce((acc, i) => acc + (i.base64?.length || 0), 0);
+        debugHistory('base64 bytes (approx)', base64Bytes);
+      }
     } catch (e) {
       console.error('DB Error', e);
     }
-  };
+  }, [setHistory]);
+
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
 
   const filteredHistory = useMemo(() => {
     let result = [...history];
@@ -92,11 +101,14 @@ export const useHistory = () => {
     });
   };
 
-  const getVariationsByGroupId = (groupId: string): ImageItem[] => {
-    return history
-      .filter((item) => item.groupId === groupId)
-      .sort((a, b) => (a.variationIndex || 0) - (b.variationIndex || 0));
-  };
+  const getVariationsByGroupId = useCallback(
+    (groupId: string): ImageItem[] => {
+      return history
+        .filter((item) => item.groupId === groupId)
+        .sort((a, b) => (a.variationIndex || 0) - (b.variationIndex || 0));
+    },
+    [history]
+  );
 
   return {
     history,
