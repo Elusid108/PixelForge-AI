@@ -1,8 +1,24 @@
+/*
+ * Copyright 2026 Christopher Moore
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { generateImage } from '../services/api/imagen';
 import { generateFilename } from '../services/api/gemini';
-import { saveToDB } from '../services/storage/indexedDB';
+import { saveManyToDB } from '../services/storage/indexedDB';
 import { ImageItem } from '../types';
 
 export const useImageGeneration = () => {
@@ -58,8 +74,8 @@ export const useImageGeneration = () => {
       const groupId = variations > 1 ? crypto.randomUUID() : undefined;
 
       for (let i = 0; i < imageBase64Array.length; i++) {
-        const filename = imageBase64Array.length > 1 
-          ? `${baseFilename}-${i + 1}` 
+        const filename = imageBase64Array.length > 1
+          ? `${baseFilename}-${i + 1}`
           : baseFilename;
 
         const newItem: ImageItem = {
@@ -79,10 +95,11 @@ export const useImageGeneration = () => {
           variationIndex: groupId ? i : undefined,
         };
 
-        await saveToDB(newItem);
-        addToHistory(newItem);
         newItems.push(newItem);
       }
+
+      await saveManyToDB(newItems);
+      newItems.forEach((item) => addToHistory(item));
 
       // Set the first generated image as current
       if (newItems.length > 0) {
