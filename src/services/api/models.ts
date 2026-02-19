@@ -37,9 +37,13 @@ function sortModels(models: ModelOption[]): ModelOption[] {
     const bName = b.name.toLowerCase();
     const aHasGemini = aName.includes('gemini');
     const bHasGemini = bName.includes('gemini');
+    const aHasGemma = aName.includes('gemma');
+    const bHasGemma = bName.includes('gemma');
 
     if (aHasGemini && !bHasGemini) return -1;
     if (!aHasGemini && bHasGemini) return 1;
+    if (aHasGemma && !bHasGemma) return -1;
+    if (!aHasGemma && bHasGemma) return 1;
     return bName.localeCompare(aName);
   });
 }
