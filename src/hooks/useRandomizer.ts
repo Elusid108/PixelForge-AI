@@ -29,7 +29,7 @@ export const useRandomizer = () => {
   const [isRandomizing, setIsRandomizing] = useState(false);
   const [randomType, setRandomType] = useState<string>('ANY');
   const [isRandomizerOpen, setIsRandomizerOpen] = useState(false);
-  const { apiKey, setGenerationOptions, setError, setShowSettings, setProcessingStatus } = useAppStore();
+  const { apiKey, setGenerationOptions, setError, setShowSettings, setProcessingStatus, selectedTextModel } = useAppStore();
 
   const randomize = async (mode: RandomizeMode = 'everything') => {
     if (!apiKey) {
@@ -44,7 +44,7 @@ export const useRandomizer = () => {
       if (mode === 'prompt-only') {
         // Randomize prompt only, keep style/lighting/mood
         setProcessingStatus('Generating random prompt...');
-        const randomPrompt = await generateRandomPrompt(apiKey, randomType);
+        const randomPrompt = await generateRandomPrompt(apiKey, randomType, selectedTextModel);
         setGenerationOptions({ prompt: randomPrompt });
       } else if (mode === 'style-only') {
         // Randomize style/lighting/mood only, keep prompt
@@ -78,7 +78,7 @@ export const useRandomizer = () => {
         });
 
         // 2. Generate Random Prompt
-        const randomPrompt = await generateRandomPrompt(apiKey, randomType);
+        const randomPrompt = await generateRandomPrompt(apiKey, randomType, selectedTextModel);
         setGenerationOptions({ prompt: randomPrompt });
       }
     } catch (err) {

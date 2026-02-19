@@ -23,7 +23,7 @@ import { ImageItem } from '../types';
 
 export const useImageGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const { apiKey, generationOptions, addToHistory, setCurrentImage, setSelectedId, setError, setProcessingStatus } =
+  const { apiKey, generationOptions, addToHistory, setCurrentImage, setSelectedId, setError, setProcessingStatus, selectedTextModel, selectedImageModel, availableImageModels } =
     useAppStore();
 
   const generate = async () => {
@@ -44,6 +44,11 @@ export const useImageGeneration = () => {
       // 1. Generate Images
       const modifiers = generationOptions.style + generationOptions.lighting + generationOptions.mood;
       setProcessingStatus(`Generating ${variations} image${variations > 1 ? 's' : ''}...`);
+      const selectedImageOption = availableImageModels.find(
+        (m) => m.name.replace(/^models\//, '') === selectedImageModel
+      );
+      const imageEndpoint = selectedImageOption?.imageEndpoint ?? 'predict';
+
       const imageBase64Array = await generateImage(apiKey, {
         prompt: generationOptions.prompt,
         modifiers,
@@ -51,13 +56,15 @@ export const useImageGeneration = () => {
         negativePrompt: generationOptions.negativePrompt,
         resolution: generationOptions.resolution || '1K',
         variations: variations,
+        model: selectedImageModel,
+        imageEndpoint,
       });
 
       // 2. Generate Filename (API Call)
       setProcessingStatus('Generating title...');
       let baseFilename = `PixelForge-${Date.now()}`;
       try {
-        baseFilename = await generateFilename(apiKey, generationOptions.prompt);
+        baseFilename = await generateFilename(apiKey, generationOptions.prompt, selectedTextModel);
       } catch (e) {
         if (import.meta.env.DEV) {
           console.warn('Filename generation failed, using default', e);

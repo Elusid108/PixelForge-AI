@@ -72,6 +72,7 @@ export interface GeminiResponse {
     content?: {
       parts?: Array<{
         text?: string;
+        inlineData?: { mimeType?: string; data?: string };
       }>;
     };
   }>;

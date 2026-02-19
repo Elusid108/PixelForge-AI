@@ -16,11 +16,36 @@
 
 import { create } from 'zustand';
 import { ImageItem, GenerationOptions } from '../types';
+import {
+  getSelectedTextModel,
+  setSelectedTextModelStorage,
+  getSelectedImageModel,
+  setSelectedImageModelStorage,
+} from '../services/storage/localStorage';
+
+export type ImageEndpointType = 'predict' | 'generateContent';
+
+export interface ModelOption {
+  name: string;
+  displayName: string;
+  /** Only set for image models: which API to use for image generation */
+  imageEndpoint?: ImageEndpointType;
+}
 
 interface AppState {
   // API Key
   apiKey: string;
   setApiKey: (key: string) => void;
+
+  // Model Selection
+  availableTextModels: ModelOption[];
+  availableImageModels: ModelOption[];
+  selectedTextModel: string;
+  selectedImageModel: string;
+  setAvailableTextModels: (models: ModelOption[]) => void;
+  setAvailableImageModels: (models: ModelOption[]) => void;
+  setSelectedTextModel: (model: string) => void;
+  setSelectedImageModel: (model: string) => void;
 
   // History
   history: ImageItem[];
@@ -92,6 +117,22 @@ export const useAppStore = create<AppState>((set) => ({
   // API Key
   apiKey: '',
   setApiKey: (key: string) => set({ apiKey: key }),
+
+  // Model Selection
+  availableTextModels: [],
+  availableImageModels: [],
+  selectedTextModel: getSelectedTextModel() ?? 'gemini-2.5-flash-lite',
+  selectedImageModel: getSelectedImageModel() ?? 'imagen-4.0-generate-001',
+  setAvailableTextModels: (models: ModelOption[]) => set({ availableTextModels: models }),
+  setAvailableImageModels: (models: ModelOption[]) => set({ availableImageModels: models }),
+  setSelectedTextModel: (model: string) => {
+    setSelectedTextModelStorage(model);
+    set({ selectedTextModel: model });
+  },
+  setSelectedImageModel: (model: string) => {
+    setSelectedImageModelStorage(model);
+    set({ selectedImageModel: model });
+  },
 
   // History
   history: [],

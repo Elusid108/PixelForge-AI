@@ -18,7 +18,8 @@ import { callTextAI } from './apiClient';
 
 export const generateRandomPrompt = async (
   key: string,
-  category: string
+  category: string,
+  model?: string
 ): Promise<string> => {
   let focusInstruction =
     'The Subject: Randomly select a new subject for every response. It can be anything—a cosmic event, a quiet domestic moment, a mythological creature, a futuristic architectural detail, or a microscopic interaction.';
@@ -55,7 +56,7 @@ export const generateRandomPrompt = async (
 **Output:** Just the description. Nothing else.`;
 
   try {
-    return await callTextAI(key, systemInstruction, 'Hallucinate a new visual scene now.');
+    return await callTextAI(key, systemInstruction, 'Hallucinate a new visual scene now.', model);
   } catch (e) {
     console.error('All text models failed', e);
     // Fallback prompt
@@ -63,12 +64,12 @@ export const generateRandomPrompt = async (
   }
 };
 
-export const generateFilename = async (key: string, originalPrompt: string): Promise<string> => {
+export const generateFilename = async (key: string, originalPrompt: string, model?: string): Promise<string> => {
   const systemInstruction = 'You are a filename generator.';
   const userPrompt = `Create a very short, filename-safe title (1-3 words, using underscores instead of spaces, no special chars, no file extension) that summarizes this image description: "${originalPrompt}". Output ONLY the summary.`;
 
   try {
-    const name = await callTextAI(key, systemInstruction, userPrompt);
+    const name = await callTextAI(key, systemInstruction, userPrompt, model);
     return name.replace(/[^a-zA-Z0-9_]/g, '');
   } catch (e) {
     return `Image_${Date.now()}`;

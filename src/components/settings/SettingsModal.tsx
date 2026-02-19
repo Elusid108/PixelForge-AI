@@ -15,11 +15,24 @@
  */
 
 import React, { FormEvent } from 'react';
-import { Settings, ExternalLink } from 'lucide-react';
+import { Settings, ExternalLink, RefreshCw } from 'lucide-react';
 import { useSettings } from '../../hooks/useSettings';
 
 export const SettingsModal: React.FC = () => {
-  const { apiKey, showSettings, setShowSettings, saveSettings } = useSettings();
+  const {
+    apiKey,
+    showSettings,
+    setShowSettings,
+    saveSettings,
+    availableTextModels,
+    availableImageModels,
+    selectedTextModel,
+    selectedImageModel,
+    setSelectedTextModel,
+    setSelectedImageModel,
+    refreshModels,
+    isRefreshingModels,
+  } = useSettings();
 
   if (!showSettings) return null;
 
@@ -63,6 +76,66 @@ export const SettingsModal: React.FC = () => {
               Get a free API Key from Google AI Studio
             </a>
           </div>
+          {apiKey && (
+            <div className="flex justify-between items-center bg-gray-950 border border-gray-800 p-3 rounded-lg">
+              <span className="text-xs text-gray-400">
+                {availableTextModels.length > 0 || availableImageModels.length > 0
+                  ? `${availableTextModels.length} text, ${availableImageModels.length} image models`
+                  : 'No models loaded'}
+              </span>
+              <button
+                type="button"
+                onClick={refreshModels}
+                disabled={isRefreshingModels}
+                className="text-xs px-3 py-2 bg-purple-900/50 text-purple-400 hover:bg-purple-800/50 rounded-md transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingModels ? 'animate-spin' : ''}`} />
+                {isRefreshingModels ? 'Scanning...' : 'Refresh List'}
+              </button>
+            </div>
+          )}
+          {availableTextModels.length > 0 && (
+            <>
+              <div>
+                <label className="text-xs uppercase font-bold text-gray-500">
+                  Text Generation Model
+                </label>
+                <select
+                  value={selectedTextModel}
+                  onChange={(e) => setSelectedTextModel(e.target.value)}
+                  className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none mt-1"
+                >
+                  {availableTextModels.map((model) => (
+                    <option
+                      key={model.name}
+                      value={model.name.replace(/^models\//, '')}
+                    >
+                      {model.displayName || model.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs uppercase font-bold text-gray-500">
+                  Image Generation Model
+                </label>
+                <select
+                  value={selectedImageModel}
+                  onChange={(e) => setSelectedImageModel(e.target.value)}
+                  className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none mt-1"
+                >
+                  {availableImageModels.map((model) => (
+                    <option
+                      key={model.name}
+                      value={model.name.replace(/^models\//, '')}
+                    >
+                      {model.displayName || model.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
           <div className="flex justify-end gap-2 mt-6">
             {apiKey && (
               <button

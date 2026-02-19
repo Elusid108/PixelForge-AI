@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { ImagenResponse } from '../../types';
+import type { ImageEndpointType } from '../../store/useAppStore';
+import { GeminiResponse, ImagenResponse } from '../../types';
 
 export interface ImageGenerationOptions {
   prompt: string;
@@ -23,14 +24,65 @@ export interface ImageGenerationOptions {
   negativePrompt?: string;
   resolution?: string;
   variations?: number;
+  model?: string;
+  imageEndpoint?: ImageEndpointType;
 }
 
 export const generateImage = async (
   key: string,
   options: ImageGenerationOptions
 ): Promise<string[]> => {
-  const { prompt, modifiers, ratio = '1:1', negativePrompt, resolution = '1K', variations = 1 } = options;
+  const {
+    prompt,
+    modifiers,
+    ratio = '1:1',
+    negativePrompt,
+    resolution = '1K',
+    variations = 1,
+    model = 'imagen-4.0-generate-001',
+    imageEndpoint = 'predict',
+  } = options;
   const fullPrompt = modifiers ? `${prompt} ${modifiers}` : prompt;
+  const modelId = model.replace(/^models\//, '');
+
+  if (imageEndpoint === 'generateContent') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`;
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      generationConfig: { responseModalities: ['IMAGE'] },
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data: GeminiResponse = await response.json();
+
+    if (data.error) {
+      const errMsg = data.error.message?.toLowerCase() || '';
+      if (errMsg.includes('safety') || errMsg.includes('blocked') || errMsg.includes('policy')) {
+        throw new Error('Content Violation: This prompt triggered safety filters.');
+      }
+      throw new Error('Image API Error: ' + data.error.message);
+    }
+
+    const candidate = data.candidates?.[0];
+    if (!candidate?.content?.parts) {
+      throw new Error('Generation Failed: No image data returned. (Possible safety block)');
+    }
+
+    const images = candidate.content.parts
+      .filter((p) => p.inlineData?.data && (p.inlineData?.mimeType ?? '').startsWith('image/'))
+      .map((p) => p.inlineData!.data!);
+
+    if (images.length === 0) {
+      throw new Error('Generation Failed: No valid image data returned.');
+    }
+
+    return images;
+  }
 
   const payload = {
     instances: [{ prompt: fullPrompt }],
@@ -42,8 +94,7 @@ export const generateImage = async (
     },
   };
 
-  // Imagen only works with v1beta - v1 has CORS issues and doesn't support it
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${key}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:predict?key=${key}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -53,10 +104,8 @@ export const generateImage = async (
 
   const data: ImagenResponse = await response.json();
 
-  // Check for API errors
   if (data.error) {
     const errMsg = data.error.message?.toLowerCase() || '';
-    // Check specifically for content safety violations
     if (errMsg.includes('safety') || errMsg.includes('blocked') || errMsg.includes('policy')) {
       throw new Error('Content Violation: This prompt triggered safety filters.');
     }
@@ -67,7 +116,6 @@ export const generateImage = async (
     throw new Error('Generation Failed: No image data returned. (Possible safety block)');
   }
 
-  // Return all predictions as an array of base64 strings
   const images = data.predictions
     .map((p) => p.bytesBase64Encoded)
     .filter((img): img is string => img !== undefined);

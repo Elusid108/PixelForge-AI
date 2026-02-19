@@ -14,12 +14,26 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { getApiKey, setApiKey as saveApiKey } from '../services/storage/localStorage';
+import { fetchModels } from '../services/api/models';
 
 export const useSettings = () => {
-  const { apiKey, setApiKey, showSettings, setShowSettings } = useAppStore();
+  const {
+    apiKey,
+    setApiKey,
+    showSettings,
+    setShowSettings,
+    availableTextModels,
+    availableImageModels,
+    selectedTextModel,
+    selectedImageModel,
+    setSelectedTextModel,
+    setSelectedImageModel,
+  } = useAppStore();
+
+  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
 
   useEffect(() => {
     const storedKey = getApiKey();
@@ -29,6 +43,22 @@ export const useSettings = () => {
       setShowSettings(true);
     }
   }, [setApiKey, setShowSettings]);
+
+  useEffect(() => {
+    if (apiKey?.trim()) {
+      fetchModels(apiKey);
+    }
+  }, [apiKey]);
+
+  const refreshModels = async () => {
+    if (!apiKey?.trim()) return;
+    setIsRefreshingModels(true);
+    try {
+      await fetchModels(apiKey);
+    } finally {
+      setIsRefreshingModels(false);
+    }
+  };
 
   const saveSettings = (key: string) => {
     if (key.trim()) {
@@ -43,5 +73,13 @@ export const useSettings = () => {
     showSettings,
     setShowSettings,
     saveSettings,
+    availableTextModels,
+    availableImageModels,
+    selectedTextModel,
+    selectedImageModel,
+    setSelectedTextModel,
+    setSelectedImageModel,
+    refreshModels,
+    isRefreshingModels,
   };
 };
