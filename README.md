@@ -1,21 +1,21 @@
-# IdeaForge AI
-> A personal, AI-driven ideation workspace that transforms raw thoughts into structured projects using Google Sheets as a headless database.
+# PixelForge AI
+> A React-based workspace for advanced AI image generation, structured prompt engineering, and local asset management. It provides a unified interface to interact with Google's generative models for rapid visual prototyping.
 
 ## Overview
-IdeaForge AI bridges the gap between chaotic brainstorming and structured project execution. Users input stream-of-consciousness ideas via text or voice, which are then processed by Google's Gemini AI to extract structured summaries, key features, and categorical tags. To ensure complete data ownership and privacy, the application bypasses traditional backend databases, utilizing the Google Sheets API to store all relational data directly within the user's personal Google Drive. This creates a seamless, serverless system for managing the entire lifecycle of an idea from conception to execution.
+PixelForge AI addresses the workflow fragmentation often found in prompt engineering by providing a cohesive, parameter-driven dashboard for AI image creation. Under the hood, the application leverages React and TypeScript to manage complex state across prompt configurations, style modifiers, and user settings. It connects directly to Google's Imagen and Gemini APIs, processing generation requests while seamlessly persisting results and metadata to the browser's local storage engines for immediate retrieval and historical tracking.
 
 ## Key Features
-* **AI-Powered Structuring:** Transforms unstructured voice or text dumps into organized, actionable project blueprints using natural language processing.
-* **Progressive Pipeline Workflow:** Navigates users through a continuous project lifecycle, escalating concepts from an Ideas inbox to interactive Brainstorms, structured Projects, and final Campaigns.
-* **Serverless Data Sovereignty:** Operates without a traditional backend by leveraging a user's personal Google Drive and Google Sheets to perform relational database operations directly from the client.
+* **Structured Generation Engine:** Facilitates precise text-to-image creation by combining raw user input with configurable style, lighting, and mood modifiers.
+* **Workspace & History Management:** Transitions users from an active prompt engineering workspace to a comprehensive history module equipped with filtering, metadata inspection, and bulk ZIP exporting.
+* **Client-Side Persistence:** Employs IndexedDB and standard local storage to maintain a robust, persistent catalog of generated assets and application states without relying on a centralized database.
 
 ## Technical Architecture
-* **Frontend/UI:** React 18, TypeScript, Tailwind CSS, Shadcn UI, TanStack React Query
-* **Backend/Logic:** Google Gemini API (AI Processing), Web Speech API (Voice Input)
-* **Infrastructure/Hardware:** Google Sheets API (Headless DB), Google Drive API (Storage), Vite
+* **Frontend/UI:** React, TypeScript, Tailwind CSS, Vite
+* **Backend/Logic:** Google Imagen API, Google Gemini API, Client-side State Management
+* **Infrastructure/Hardware:** Browser-native storage (IndexedDB), Static Hosting Environment
 
 ## Setup & Deployment
-1. Clone the repository and run `npm install` to install required dependencies.
-2. Configure a Google Cloud Project with Drive and Sheets API access, and obtain Gemini API credentials.
-3. Start the local development server using `npm run dev`.
-4. Authenticate via the frontend application to automatically provision the hidden database spreadsheet within your Google Drive.
+1. Clone the repository and navigate to the project directory.
+2. Install frontend dependencies by executing `npm install`.
+3. Duplicate the `.env.example` file to `.env` and supply the required API keys.
+4. Launch the local development server utilizing `npm run dev`, or compile the application for deployment with `npm run build`.
